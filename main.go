@@ -5,15 +5,76 @@ import (
 	"fmt"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/workqueue"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func main() {
+	cli := getClient()
+	// checkPod("dubbo", cli)
+
+	podListWatcher := cache.NewListWatchFromClient(
+		cli.CoreV1().RESTClient(),
+		"pods",
+		v1.NamespaceDefault,
+		fields.Everything())
+
+	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
+
+	indexer, informer := cache.NewIndexerInformer(podListWatcher, &v1.Pod{}, 0, cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			key, err := cache.MetaNamespaceKeyFunc(obj)
+			if err == nil {
+				queue.Add(key)
+			}
+			fmt.Println("ADD")
+		},
+		UpdateFunc: func(old interface{}, new interface{}) {
+			key, err := cache.MetaNamespaceKeyFunc(new)
+			if err == nil {
+				queue.Add(key)
+			}
+			fmt.Println("UPDATE")
+		},
+		DeleteFunc: func(obj interface{}) {
+			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+			if err == nil {
+				queue.Add(key)
+			}
+			fmt.Println("DELETE")
+		},
+	}, cache.Indexers{})
+
+	controller := NewController(queue, indexer, informer)
+
+	// We can now warm up the cache for initial synchronization.
+	// Let's suppose that we knew about a pod "mypod" on our last run, therefore add it to the cache.
+	// If this pod is not there anymore, the controller will be notified about the removal after the
+	// cache has synchronized.
+	indexer.Add(&v1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: v1.NamespaceDefault,
+			Labels: map[string]string{
+				"app": "dubbo",
+			},
+		},
+	})
+
+	// Now let's start the controller
+	stop := make(chan struct{})
+	defer close(stop)
+	go controller.Run(1, stop)
+
+	// Wait forever
+	select {}
+}
+
+func getClient() *kubernetes.Clientset {
 	var kubeconfig *string
 	if home := homeDir(); home != "" {
 		s := filepath.Join(home, ".kube", "config")
@@ -22,7 +83,6 @@ func main() {
 		kubeconfig = flag.String("kubeconfig", "", "kubeconfig存放位置")
 	}
 	flag.Parse()
-
 	fmt.Println(*kubeconfig)
 	config, e := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if e != nil {
@@ -32,67 +92,7 @@ func main() {
 	if e != nil {
 		panic(e.Error())
 	}
-	podList, e := clientset.CoreV1().Pods("default").List(metav1.ListOptions{
-		LabelSelector: "app=dubbo",
-	})
-	if e != nil {
-		panic(e.Error())
-	}
-
-	fmt.Printf("dubbo app pod 共有 %d 个\n", len(podList.Items))
-	for i := range podList.Items {
-		pod := podList.Items[i]
-
-		after := strings.SplitN(pod.Name, "-", 2)
-		if len(after) == 2 {
-			serviceName := "dubbo-svc-" + after[1]
-			checkService(serviceName, clientset)
-		}
-
-	}
-
-}
-
-func checkService(svcName string, clientset *kubernetes.Clientset) {
-	fmt.Println("svcName=", svcName)
-	serviceList, e := clientset.CoreV1().Services("default").List(metav1.ListOptions{
-		FieldSelector: "metadata.name=" + svcName,
-	})
-	if e != nil {
-		fmt.Println("获取Service失败", e.Error())
-	}
-	if len(serviceList.Items) >= 0 {
-		e := clientset.CoreV1().Services("default").Delete(svcName, &metav1.DeleteOptions{})
-		if e == nil {
-			fmt.Println("删除成功", svcName)
-		}
-	}
-
-	fmt.Println("创建service ", svcName)
-
-	svc := &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      svcName,
-			Namespace: metav1.NamespaceDefault,
-		},
-		Spec: v1.ServiceSpec{
-			Type: v1.ServiceTypeClusterIP,
-			Selector: map[string]string{
-				"app": "dubbo-svc",
-			},
-			Ports: []v1.ServicePort{
-				{Name: "web", Port: 8080, TargetPort: intstr.FromInt(80)},
-				{Name: "test", Port: 8081, TargetPort: intstr.FromInt(81)},
-			},
-		},
-	}
-
-	create, e := clientset.CoreV1().Services("default").Create(svc)
-	if e != nil {
-		fmt.Println("创建service 失败", e.Error())
-
-	}
-	fmt.Println(svcName, "创建成功", create.Name)
+	return clientset
 }
 
 func homeDir() string {

@@ -5,15 +5,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes"
 	"strings"
-)
-
-const (
-	ADD    string = "ADD"
-	DELETE string = "DELETE"
-	UPDATE string = "UPDATE"
-	SYNC   string = "SYNC"
 )
 
 type Action struct {
@@ -36,23 +28,23 @@ func getPodName(podNameNs string) (namespace, podName string) {
 func isTarget(podName string) bool {
 	return strings.HasPrefix(podName, podSelectorName+"-")
 }
-func deletePodProcess(cli *kubernetes.Clientset, podName string) {
+func (h *helper) deletePodProcess(podName string) {
 	// 删除Service
-	e := deleteSvc(cli, podName)
+	e := h.deleteSvc(podName)
 	if e != nil {
 		fmt.Println(e.Error())
 	}
 
 }
 
-func updatePodProcess(cli *kubernetes.Clientset, podName string) {
-	updatePodSelector(cli, podName)
+func (h *helper) updatePodProcess(podName string) {
+	h.updatePodSelector(podName)
 }
-func addPodProcess(cli *kubernetes.Clientset, podName string) {
-	updatePodSelector(cli, podName)
+func (h *helper) addPodProcess(podName string) {
+	h.updatePodSelector(podName)
 
-	if !isServiceExists(cli, podName) {
-		createSvc(cli, podName)
+	if !h.isServiceExists(podName) {
+		h.createSvc(podName)
 	}
 }
 
@@ -72,8 +64,8 @@ func getCommonUID(podName string) string {
 	return ""
 }
 
-func updatePodSelector(cli *kubernetes.Clientset, podName string) {
-	pod, e := cli.CoreV1().Pods("default").Get(podName, metav1.GetOptions{})
+func (h *helper) updatePodSelector(podName string) {
+	pod, e := h.Pods("default").Get(podName, metav1.GetOptions{})
 	if e != nil {
 		fmt.Println(" 无此POD ", e.Error())
 		return
@@ -81,7 +73,7 @@ func updatePodSelector(cli *kubernetes.Clientset, podName string) {
 
 	// 增加了PodName Label，再更新
 	if addPodNameLabels(pod) {
-		_, e = cli.CoreV1().Pods("default").Update(pod)
+		_, e = h.Pods("default").Update(pod)
 		if e != nil {
 			fmt.Println(e.Error())
 		}
@@ -107,9 +99,9 @@ func addPodNameLabels(pod *v1.Pod) bool {
 	return false
 }
 
-func isServiceExists(cli *kubernetes.Clientset, podName string) bool {
+func (h *helper) isServiceExists(podName string) bool {
 	svcName := getSvcName(podName)
-	serviceList, e := cli.CoreV1().Services("default").List(metav1.ListOptions{
+	serviceList, e := h.Services("default").List(metav1.ListOptions{
 		FieldSelector: "metadata.name=" + svcName,
 	})
 
@@ -125,7 +117,7 @@ func isServiceExists(cli *kubernetes.Clientset, podName string) bool {
 	return false
 }
 
-func createSvc(cli *kubernetes.Clientset, podName string) {
+func (h *helper) createSvc(podName string) {
 	svcName := getSvcName(podName)
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -144,7 +136,7 @@ func createSvc(cli *kubernetes.Clientset, podName string) {
 			},
 		},
 	}
-	create, e := cli.CoreV1().Services("default").Create(svc)
+	create, e := h.Services("default").Create(svc)
 	if e != nil {
 		fmt.Println("创建 service 失败", e.Error())
 
@@ -154,9 +146,9 @@ func createSvc(cli *kubernetes.Clientset, podName string) {
 
 }
 
-func deleteSvc(cli *kubernetes.Clientset, podName string) error {
+func (h *helper) deleteSvc(podName string) error {
 	svcName := getSvcName(podName)
 	fmt.Println("删除 SVC", svcName)
-	return cli.CoreV1().Services("default").Delete(svcName, &metav1.DeleteOptions{})
+	return h.Services("default").Delete(svcName, &metav1.DeleteOptions{})
 
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
 
 	"time"
@@ -17,15 +16,15 @@ type Controller struct {
 	indexer  cache.Indexer
 	queue    workqueue.RateLimitingInterface
 	informer cache.Controller
-	cli      *kubernetes.Clientset
+	helper   *helper
 }
 
-func NewController(queue workqueue.RateLimitingInterface, indexer cache.Indexer, informer cache.Controller, cli *kubernetes.Clientset) *Controller {
+func NewController(queue workqueue.RateLimitingInterface, indexer cache.Indexer, informer cache.Controller, helper *helper) *Controller {
 	return &Controller{
 		informer: informer,
 		indexer:  indexer,
 		queue:    queue,
-		cli:      cli,
+		helper:   helper,
 	}
 
 }
@@ -38,13 +37,13 @@ func (c *Controller) processNextItem() bool {
 
 	defer c.queue.Done(act)
 
-	err := c.syncToStdout(act.(Action), c.cli)
+	err := c.syncToStdout(act.(Action))
 
 	c.handleErr(err, act)
 	return true
 }
 
-func (c *Controller) syncToStdout(act Action, cli *kubernetes.Clientset) error {
+func (c *Controller) syncToStdout(act Action) error {
 	_, exists, err := c.indexer.GetByKey(act.PodName)
 	if err != nil {
 		return err
@@ -59,13 +58,13 @@ func (c *Controller) syncToStdout(act Action, cli *kubernetes.Clientset) error {
 
 	switch act.ActionName {
 	case ADD:
-		addPodProcess(cli, podName)
+		c.helper.addPodProcess(podName)
 	case DELETE:
 		if !exists {
-			deletePodProcess(cli, podName)
+			c.helper.deletePodProcess(podName)
 		}
 	case UPDATE:
-		updatePodProcess(cli, podName)
+		c.helper.updatePodProcess(podName)
 	}
 
 	return nil

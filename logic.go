@@ -59,7 +59,7 @@ func addPodProcess(cli *kubernetes.Clientset, podName string) {
 func getSvcName(podName string) string {
 	uid := getCommonUID(podName)
 	svcName := podSelectorName + "-svc-" + uid
-	fmt.Printf("SVC NAME:%s \n", svcName)
+	// fmt.Printf("SVC NAME:%s \n", svcName)
 	return svcName
 }
 

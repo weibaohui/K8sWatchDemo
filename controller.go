@@ -50,9 +50,9 @@ func (c *Controller) syncToStdout(act Action, cli *kubernetes.Clientset) error {
 		return err
 	}
 
-	fmt.Println("收到消息", act.ActionName, act.PodName)
-	namespace, podName := getPodName(act.PodName)
-	fmt.Println("所属namespace", namespace)
+	// fmt.Println("收到消息", act.ActionName, act.PodName)
+	_, podName := getPodName(act.PodName)
+	// fmt.Println("所属namespace", namespace)
 	if !isTarget(podName) {
 		return nil
 	}

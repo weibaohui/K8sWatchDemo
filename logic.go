@@ -38,7 +38,7 @@ func isTarget(podName string) bool {
 }
 func deletePodProcess(cli *kubernetes.Clientset, podName string) {
 	// 删除Service
-	e := deleteSvc(cli, getSvcName(podSelectorName, podName))
+	e := deleteSvc(cli, podName)
 	if e != nil {
 		fmt.Println(e.Error())
 	}
@@ -46,9 +46,12 @@ func deletePodProcess(cli *kubernetes.Clientset, podName string) {
 }
 
 func addPodProcess(cli *kubernetes.Clientset, podName string) {
-	svcName := getSvcName(podSelectorName, podName)
-	checkServiceExists(cli, svcName)
-	createSvc(cli, svcName)
+	updatePodSelector(cli, podName)
+
+	if !checkServiceExists(cli, podName) {
+		createSvc(cli, podName)
+	}
+
 }
 
 func getSvcName(podSelectorName, podName string) string {
@@ -86,7 +89,35 @@ func checkPod(clientset *kubernetes.Clientset, podSelectorName string) {
 	}
 }
 
-func checkServiceExists(cli *kubernetes.Clientset, svcName string) bool {
+func updatePodSelector(cli *kubernetes.Clientset, podName string) {
+	pod, e := cli.CoreV1().Pods("default").Get(podName, metav1.GetOptions{})
+	if e != nil {
+		fmt.Println(e.Error())
+		return
+	}
+
+	oldLabels := pod.GetLabels()
+
+	// 没有 PodName
+	if oldLabels["podName"] == "" {
+
+		labels := make(map[string]string)
+		for e := range oldLabels {
+			labels[e] = oldLabels[e]
+		}
+		labels["podName"] = podName
+		pod.SetLabels(labels)
+		_, e = cli.CoreV1().Pods("default").Update(pod)
+		if e != nil {
+			fmt.Println(e.Error())
+		}
+
+	}
+
+}
+
+func checkServiceExists(cli *kubernetes.Clientset, podName string) bool {
+	svcName := getSvcName(podSelectorName, podName)
 	serviceList, e := cli.CoreV1().Services("default").List(metav1.ListOptions{
 		FieldSelector: "metadata.name=" + svcName,
 	})
@@ -103,17 +134,18 @@ func checkServiceExists(cli *kubernetes.Clientset, svcName string) bool {
 	return false
 }
 
-func createSvc(cli *kubernetes.Clientset, svcName string) {
+func createSvc(cli *kubernetes.Clientset, podName string) {
+	svcName := getSvcName(podSelectorName, podName)
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      svcName,
 			Namespace: metav1.NamespaceDefault,
 		},
 		Spec: v1.ServiceSpec{
-			Type:      v1.ServiceTypeClusterIP,
-			ClusterIP: v1.ClusterIPNone,
+			Type: v1.ServiceTypeNodePort,
+			// ClusterIP: v1.ClusterIPNone,
 			Selector: map[string]string{
-				"app": podSelectorName + "-svc",
+				"podName": podName,
 			},
 			Ports: []v1.ServicePort{
 				{Name: "web", Port: 8080, TargetPort: intstr.FromInt(80)},
@@ -131,7 +163,8 @@ func createSvc(cli *kubernetes.Clientset, svcName string) {
 
 }
 
-func deleteSvc(cli *kubernetes.Clientset, svcName string) error {
+func deleteSvc(cli *kubernetes.Clientset, podName string) error {
+	svcName := getSvcName(podSelectorName, podName)
 	fmt.Println("删除 SVC", svcName)
 	return cli.CoreV1().Services("default").Delete(svcName, &metav1.DeleteOptions{})
 

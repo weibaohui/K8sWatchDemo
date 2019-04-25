@@ -65,6 +65,7 @@ func (c *Controller) syncToStdout(act Action, cli *kubernetes.Clientset) error {
 			deletePodProcess(cli, podName)
 		}
 	case UPDATE:
+		updatePodProcess(cli, podName)
 	}
 
 	return nil

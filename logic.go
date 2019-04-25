@@ -45,16 +45,18 @@ func deletePodProcess(cli *kubernetes.Clientset, podName string) {
 
 }
 
+func updatePodProcess(cli *kubernetes.Clientset, podName string) {
+	updatePodSelector(cli, podName)
+}
 func addPodProcess(cli *kubernetes.Clientset, podName string) {
 	updatePodSelector(cli, podName)
 
-	if !checkServiceExists(cli, podName) {
+	if !isServiceExists(cli, podName) {
 		createSvc(cli, podName)
 	}
-
 }
 
-func getSvcName(podSelectorName, podName string) string {
+func getSvcName(podName string) string {
 	uid := getCommonUID(podName)
 	svcName := podSelectorName + "-svc-" + uid
 	fmt.Printf("SVC NAME:%s \n", svcName)
@@ -70,54 +72,43 @@ func getCommonUID(podName string) string {
 	return ""
 }
 
-func checkPod(clientset *kubernetes.Clientset, podSelectorName string) {
-	podList, e := clientset.CoreV1().Pods("default").List(metav1.ListOptions{
-		LabelSelector: "app=" + podSelectorName,
-	})
-	if e != nil {
-		panic(e.Error())
-	}
-	fmt.Printf("dubbo app pod 共有 %d 个\n", len(podList.Items))
-	for i := range podList.Items {
-		pod := podList.Items[i]
-
-		after := strings.SplitN(pod.Name, "-", 2)
-		if len(after) == 2 {
-			serviceName := podSelectorName + "-svc-" + after[1]
-			checkServiceExists(clientset, serviceName)
-		}
-	}
-}
-
 func updatePodSelector(cli *kubernetes.Clientset, podName string) {
 	pod, e := cli.CoreV1().Pods("default").Get(podName, metav1.GetOptions{})
 	if e != nil {
-		fmt.Println(e.Error())
+		fmt.Println(" 无此POD ", e.Error())
 		return
 	}
 
-	oldLabels := pod.GetLabels()
-
-	// 没有 PodName
-	if oldLabels["podName"] == "" {
-
-		labels := make(map[string]string)
-		for e := range oldLabels {
-			labels[e] = oldLabels[e]
-		}
-		labels["podName"] = podName
-		pod.SetLabels(labels)
+	// 增加了PodName Label，再更新
+	if addPodNameLabels(pod) {
 		_, e = cli.CoreV1().Pods("default").Update(pod)
 		if e != nil {
 			fmt.Println(e.Error())
 		}
-
+		fmt.Println("增加 PodName 到 metadata.labels", podName)
 	}
 
 }
 
-func checkServiceExists(cli *kubernetes.Clientset, podName string) bool {
-	svcName := getSvcName(podSelectorName, podName)
+// 设置PodName为label
+func addPodNameLabels(pod *v1.Pod) bool {
+
+	oldLabels := pod.GetLabels()
+	// 没有 PodName
+	if oldLabels["podName"] == "" {
+		labels := make(map[string]string)
+		for e := range oldLabels {
+			labels[e] = oldLabels[e]
+		}
+		labels["podName"] = pod.Name
+		pod.SetLabels(labels)
+		return true
+	}
+	return false
+}
+
+func isServiceExists(cli *kubernetes.Clientset, podName string) bool {
+	svcName := getSvcName(podName)
 	serviceList, e := cli.CoreV1().Services("default").List(metav1.ListOptions{
 		FieldSelector: "metadata.name=" + svcName,
 	})
@@ -135,7 +126,7 @@ func checkServiceExists(cli *kubernetes.Clientset, podName string) bool {
 }
 
 func createSvc(cli *kubernetes.Clientset, podName string) {
-	svcName := getSvcName(podSelectorName, podName)
+	svcName := getSvcName(podName)
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      svcName,
@@ -164,7 +155,7 @@ func createSvc(cli *kubernetes.Clientset, podName string) {
 }
 
 func deleteSvc(cli *kubernetes.Clientset, podName string) error {
-	svcName := getSvcName(podSelectorName, podName)
+	svcName := getSvcName(podName)
 	fmt.Println("删除 SVC", svcName)
 	return cli.CoreV1().Services("default").Delete(svcName, &metav1.DeleteOptions{})
 

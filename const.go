@@ -6,3 +6,4 @@ const (
 	UPDATE string = "UPDATE"
 	SYNC   string = "SYNC"
 )
+const podSelectorName = "dubbo"

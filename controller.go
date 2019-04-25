@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"k8s.io/klog"
+	"strings"
 
 	"time"
 
@@ -16,10 +17,10 @@ type Controller struct {
 	indexer  cache.Indexer
 	queue    workqueue.RateLimitingInterface
 	informer cache.Controller
-	helper   *helper
+	helper   *Helper
 }
 
-func NewController(queue workqueue.RateLimitingInterface, indexer cache.Indexer, informer cache.Controller, helper *helper) *Controller {
+func NewController(queue workqueue.RateLimitingInterface, indexer cache.Indexer, informer cache.Controller, helper *Helper) *Controller {
 	return &Controller{
 		informer: informer,
 		indexer:  indexer,
@@ -41,6 +42,9 @@ func (c *Controller) processNextItem() bool {
 
 	c.handleErr(err, act)
 	return true
+}
+func isTarget(podName string) bool {
+	return strings.HasPrefix(podName, podSelectorName+"-")
 }
 
 func (c *Controller) syncToStdout(act Action) error {

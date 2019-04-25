@@ -14,25 +14,25 @@ import (
 var cli *kubernetes.Clientset
 var once = sync.Once{}
 
-type helper struct {
+type Helper struct {
 	cli *kubernetes.Clientset
 }
 
-func newHelper() *helper {
+func NewHelper() *Helper {
 	once.Do(func() {
 		cli = getClient()
 	})
 
-	return &helper{cli: cli}
+	return &Helper{cli: cli}
 }
 
-func (h *helper) RESTClient() rest.Interface {
+func (h *Helper) RESTClient() rest.Interface {
 	return h.cli.CoreV1().RESTClient()
 }
-func (h *helper) Pods(ns string) v1.PodInterface {
+func (h *Helper) Pods(ns string) v1.PodInterface {
 	return h.cli.CoreV1().Pods(ns)
 }
-func (h *helper) Services(ns string) v1.ServiceInterface {
+func (h *Helper) Services(ns string) v1.ServiceInterface {
 	return h.cli.CoreV1().Services(ns)
 }
 

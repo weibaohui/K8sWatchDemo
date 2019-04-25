@@ -9,7 +9,7 @@ import (
 
 func main() {
 
-	helper := newHelper()
+	helper := NewHelper()
 
 	podListWatcher := cache.NewListWatchFromClient(
 		helper.RESTClient(),

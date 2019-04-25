@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
 
 	"time"
@@ -17,42 +17,56 @@ type Controller struct {
 	indexer  cache.Indexer
 	queue    workqueue.RateLimitingInterface
 	informer cache.Controller
+	cli      *kubernetes.Clientset
 }
 
-func NewController(queue workqueue.RateLimitingInterface, indexer cache.Indexer, informer cache.Controller) *Controller {
+func NewController(queue workqueue.RateLimitingInterface, indexer cache.Indexer, informer cache.Controller, cli *kubernetes.Clientset) *Controller {
 	return &Controller{
 		informer: informer,
 		indexer:  indexer,
 		queue:    queue,
+		cli:      cli,
 	}
 
 }
 
 func (c *Controller) processNextItem() bool {
-	key, quit := c.queue.Get()
+	act, quit := c.queue.Get()
 	if quit {
 		return false
 	}
 
-	defer c.queue.Done(key)
+	defer c.queue.Done(act)
 
-	err := c.syncToStdout(key.(string))
+	err := c.syncToStdout(act.(Action), c.cli)
 
-	c.handleErr(err, key)
+	c.handleErr(err, act)
 	return true
 }
 
-func (c *Controller) syncToStdout(key string) error {
-	obj, exists, err := c.indexer.GetByKey(key)
+func (c *Controller) syncToStdout(act Action, cli *kubernetes.Clientset) error {
+	_, exists, err := c.indexer.GetByKey(act.PodName)
 	if err != nil {
 		return err
 	}
 
-	if !exists {
-		fmt.Printf("Pod %s 已删除\n", key)
-	} else {
-		fmt.Printf("Sync/Add/Update for Pod %s\n", obj.(*v1.Pod).GetName())
+	fmt.Println("收到消息", act.ActionName, act.PodName)
+	namespace, podName := getPodName(act.PodName)
+	fmt.Println("所属namespace", namespace)
+	if !isTarget(podName) {
+		return nil
 	}
+
+	switch act.ActionName {
+	case ADD:
+		addPodProcess(cli, podName)
+	case DELETE:
+		if !exists {
+			deletePodProcess(cli, podName)
+		}
+	case UPDATE:
+	}
+
 	return nil
 }
 

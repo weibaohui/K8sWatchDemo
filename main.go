@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/cache"
@@ -30,40 +29,44 @@ func main() {
 		AddFunc: func(obj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(obj)
 			if err == nil {
-				queue.Add(key)
+				queue.Add(Action{
+					PodName:    key,
+					ActionName: ADD,
+				})
 			}
-			fmt.Println("ADD")
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(new)
 			if err == nil {
-				queue.Add(key)
+				queue.Add(Action{
+					PodName:    key,
+					ActionName: UPDATE,
+				})
 			}
-			fmt.Println("UPDATE")
 		},
 		DeleteFunc: func(obj interface{}) {
 			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 			if err == nil {
-				queue.Add(key)
+				queue.Add(Action{
+					PodName:    key,
+					ActionName: DELETE,
+				})
 			}
-			fmt.Println("DELETE")
+
 		},
 	}, cache.Indexers{})
 
-	controller := NewController(queue, indexer, informer)
+	controller := NewController(queue, indexer, informer, cli)
 
-	// We can now warm up the cache for initial synchronization.
-	// Let's suppose that we knew about a pod "mypod" on our last run, therefore add it to the cache.
-	// If this pod is not there anymore, the controller will be notified about the removal after the
-	// cache has synchronized.
-	indexer.Add(&v1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: v1.NamespaceDefault,
-			Labels: map[string]string{
-				"app": "dubbo",
-			},
-		},
-	})
+	//
+	// indexer.Add(&v1.Pod{
+	// 	ObjectMeta: metav1.ObjectMeta{
+	// 		Namespace: v1.NamespaceDefault,
+	// 		Labels: map[string]string{
+	// 			"app": "dubbo",
+	// 		},
+	// 	},
+	// })
 
 	// Now let's start the controller
 	stop := make(chan struct{})

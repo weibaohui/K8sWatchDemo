@@ -1,0 +1,1 @@
+kubectl run dubbo --image=nginx:alpine

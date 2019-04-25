@@ -35,11 +35,8 @@ func (c *Controller) processNextItem() bool {
 	if quit {
 		return false
 	}
-
 	defer c.queue.Done(act)
-
-	err := c.syncToStdout(act.(Action))
-
+	err := c.processEvent(act.(Action))
 	c.handleErr(err, act)
 	return true
 }
@@ -47,7 +44,7 @@ func isTarget(podName string) bool {
 	return strings.HasPrefix(podName, podSelectorName+"-")
 }
 
-func (c *Controller) syncToStdout(act Action) error {
+func (c *Controller) processEvent(act Action) error {
 	_, exists, err := c.indexer.GetByKey(act.PodName)
 	if err != nil {
 		return err

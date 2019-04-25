@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"k8s.io/klog"
 	"strings"
 
 	"time"
@@ -40,19 +39,17 @@ func (c *Controller) processNextItem() bool {
 	c.handleErr(err, act)
 	return true
 }
+
 func isTarget(podName string) bool {
 	return strings.HasPrefix(podName, podSelectorName+"-")
 }
-
 func (c *Controller) processEvent(act Action) error {
 	_, exists, err := c.indexer.GetByKey(act.PodName)
 	if err != nil {
 		return err
 	}
 
-	// fmt.Println("收到消息", act.ActionName, act.PodName)
 	_, podName := getPodName(act.PodName)
-	// fmt.Println("所属namespace", namespace)
 	if !isTarget(podName) {
 		return nil
 	}
@@ -73,27 +70,18 @@ func (c *Controller) processEvent(act Action) error {
 
 func (c *Controller) handleErr(err error, key interface{}) {
 	if err == nil {
-		// Forget about the #AddRateLimited history of the key on every successful synchronization.
-		// This ensures that future processing of updates for this key is not delayed because of
-		// an outdated error history.
 		c.queue.Forget(key)
 		return
 	}
 
-	// This controller retries 5 times if something goes wrong. After that, it stops trying.
 	if c.queue.NumRequeues(key) < 5 {
-		klog.Infof("Error syncing pod %v: %v", key, err)
-
-		// Re-enqueue the key rate limited. Based on the rate limiter on the
-		// queue and the re-enqueue history, the key will be processed later again.
+		fmt.Printf("Error syncing pod %v: %v", key, err)
 		c.queue.AddRateLimited(key)
 		return
 	}
 
 	c.queue.Forget(key)
-	// Report to an external entity that, even after several retries, we could not successfully process this key
 	runtime.HandleError(err)
-	klog.Infof("Dropping pod %q out of the queue: %v", key, err)
 }
 
 func (c *Controller) Run(threadiness int, stopCh chan struct{}) {

@@ -1,6 +1,8 @@
-package main
+package watcher
 
 import (
+	"K8sWatchDemo/pkg"
+	"K8sWatchDemo/utils"
 	"fmt"
 	"strings"
 
@@ -16,10 +18,10 @@ type Controller struct {
 	indexer  cache.Indexer
 	queue    workqueue.RateLimitingInterface
 	informer cache.Controller
-	helper   *Helper
+	helper   *pkg.Helper
 }
 
-func NewController(queue workqueue.RateLimitingInterface, indexer cache.Indexer, informer cache.Controller, helper *Helper) *Controller {
+func NewController(queue workqueue.RateLimitingInterface, indexer cache.Indexer, informer cache.Controller, helper *pkg.Helper) *Controller {
 	return &Controller{
 		informer: informer,
 		indexer:  indexer,
@@ -35,34 +37,34 @@ func (c *Controller) processNextItem() bool {
 		return false
 	}
 	defer c.queue.Done(act)
-	err := c.processEvent(act.(Action))
+	err := c.processEvent(act.(pkg.Action))
 	c.handleErr(err, act)
 	return true
 }
 
 func isTarget(podName string) bool {
-	return strings.HasPrefix(podName, podSelectorName+"-")
+	return strings.HasPrefix(podName, PodSelectorName+"-")
 }
-func (c *Controller) processEvent(act Action) error {
-	_, exists, err := c.indexer.GetByKey(act.PodName)
+func (c *Controller) processEvent(act pkg.Action) error {
+	_, exists, err := c.indexer.GetByKey(act.PodNameNs)
 	if err != nil {
 		return err
 	}
 
-	_, podName := getPodName(act.PodName)
+	_, podName := utils.GetPodName(act.PodNameNs)
 	if !isTarget(podName) {
 		return nil
 	}
 
 	switch act.ActionName {
 	case ADD:
-		c.helper.addPodProcess(podName)
+		c.helper.AddProcess(act.PodNameNs)
 	case DELETE:
 		if !exists {
-			c.helper.deletePodProcess(podName)
+			c.helper.DeleteProcess(act.PodNameNs)
 		}
 	case UPDATE:
-		c.helper.updatePodProcess(podName)
+		c.helper.UpdateProcess(act.PodNameNs)
 	}
 
 	return nil

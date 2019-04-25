@@ -1,4 +1,4 @@
-package main
+package watcher
 
 const (
 	ADD    string = "ADD"
@@ -6,4 +6,4 @@ const (
 	UPDATE string = "UPDATE"
 	SYNC   string = "SYNC"
 )
-const podSelectorName = "dubbo"
+const PodSelectorName = "dubbo"

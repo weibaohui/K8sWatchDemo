@@ -1,11 +1,11 @@
-package main
+package utils
 
 import (
 	v1 "k8s.io/api/core/v1"
 	"strings"
 )
 
-func getPodName(podNameNs string) (namespace, podName string) {
+func GetPodName(podNameNs string) (namespace, podName string) {
 	if strings.Contains(podNameNs, "/") {
 		names := strings.SplitN(podNameNs, "/", 2)
 		namespace = names[0]
@@ -15,27 +15,30 @@ func getPodName(podNameNs string) (namespace, podName string) {
 	return "", podNameNs
 }
 
-func getSvcName(podName string) string {
-	uid := getCommonUID(podName)
-	svcName := podSelectorName + "-svc-" + uid
+func GetSvcName(podName string) string {
+	prefix, uid := GetCommonUID(podName)
+	svcName := prefix + "-svc-" + uid
 	// fmt.Printf("SVC NAME:%s \n", svcName)
 	return svcName
 }
 
 // 获取通用名称
-func getCommonUID(podName string) string {
-	after := strings.SplitN(podName, "-", 2)
-	if len(after) == 2 {
-		return after[1]
+// todo 能否加入其他格式的处理？
+func GetCommonUID(podName string) (prefix, uid string) {
+	names := strings.SplitN(podName, "-", 2)
+	if len(names) == 2 {
+		prefix = names[0]
+		uid = names[1]
+		return
 	}
-	return ""
+	return "", ""
 }
 
 // 设置PodName为label
-func addPodNameLabels(pod *v1.Pod) bool {
+func AddPodNameLabels(pod *v1.Pod) bool {
 
 	oldLabels := pod.GetLabels()
-	// 没有 PodName
+	// 没有 PodNameNs
 	if oldLabels["podName"] == "" {
 		labels := make(map[string]string)
 		for e := range oldLabels {

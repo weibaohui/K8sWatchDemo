@@ -1,6 +1,8 @@
 package main
 
 import (
+	"K8sWatchDemo/pkg"
+	"K8sWatchDemo/watcher"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
@@ -9,7 +11,7 @@ import (
 
 func main() {
 
-	helper := NewHelper()
+	helper := pkg.NewHelper()
 
 	podListWatcher := cache.NewListWatchFromClient(
 		helper.RESTClient(),
@@ -21,36 +23,36 @@ func main() {
 
 	indexer, informer := cache.NewIndexerInformer(podListWatcher, &v1.Pod{}, 0, cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			key, err := cache.MetaNamespaceKeyFunc(obj)
+			podNameNs, err := cache.MetaNamespaceKeyFunc(obj)
 			if err == nil {
-				queue.Add(Action{
-					PodName:    key,
-					ActionName: ADD,
+				queue.Add(pkg.Action{
+					PodNameNs:  podNameNs,
+					ActionName: watcher.ADD,
 				})
 			}
 		},
 		UpdateFunc: func(old interface{}, new interface{}) {
-			key, err := cache.MetaNamespaceKeyFunc(new)
+			podNameNs, err := cache.MetaNamespaceKeyFunc(new)
 			if err == nil {
-				queue.Add(Action{
-					PodName:    key,
-					ActionName: UPDATE,
+				queue.Add(pkg.Action{
+					PodNameNs:  podNameNs,
+					ActionName: watcher.UPDATE,
 				})
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			key, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+			podNameNs, err := cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 			if err == nil {
-				queue.Add(Action{
-					PodName:    key,
-					ActionName: DELETE,
+				queue.Add(pkg.Action{
+					PodNameNs:  podNameNs,
+					ActionName: watcher.DELETE,
 				})
 			}
 
 		},
 	}, cache.Indexers{})
 
-	controller := NewController(queue, indexer, informer, helper)
+	controller := watcher.NewController(queue, indexer, informer, helper)
 
 	stop := make(chan struct{})
 	defer close(stop)

@@ -13,6 +13,7 @@ type Action struct {
 	ActionName string
 }
 
+// 删除逻辑
 func (h *Helper) DeleteProcess(podNameNs string) {
 	ns, podName := utils.GetPodName(podNameNs)
 

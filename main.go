@@ -13,6 +13,8 @@ import (
 func main() {
 	go ApiWatchStart()
 	go WebServer()
+	time.Sleep(time.Second * 10)
+	watcher.AddTarget("default", "dubbo")
 	select {}
 
 }
@@ -22,7 +24,6 @@ func WebServer() {
 		// fmt.Println("web", time.Now())
 		time.Sleep(time.Second * 60)
 	}
-
 }
 
 func ApiWatchStart() {

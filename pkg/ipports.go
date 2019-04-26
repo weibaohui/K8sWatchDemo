@@ -54,8 +54,18 @@ func getNetConfig(podName string) (*NetConfig, error) {
 	config = NetConfig{
 		ExternalIPs: []string{"192.168.1.1", "192.168.1.2"},
 		ServicePorts: []v1.ServicePort{
-			{Name: "web2", Port: 8082, TargetPort: intstr.FromInt(80), NodePort: fakeNodePort(), Protocol: "TCP"},
-			{Name: "test3", Port: 8083, TargetPort: intstr.FromInt(81), NodePort: fakeNodePort(), Protocol: "UDP"},
+			{
+				Name:       "web2",
+				Port:       8082,
+				TargetPort: intstr.FromInt(80),
+				NodePort:   fakeNodePort(),
+				Protocol:   "TCP"},
+			{
+				Name:       "test3",
+				Port:       8083,
+				TargetPort: intstr.FromInt(81),
+				NodePort:   fakeNodePort(),
+				Protocol:   "UDP"},
 		},
 	}
 

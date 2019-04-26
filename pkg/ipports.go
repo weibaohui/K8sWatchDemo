@@ -15,12 +15,9 @@ type NetConfig struct {
 }
 
 // 获取IP 端口 对应关系
-// todo 改为实际的
 func getNetConfig(podName string) (*NetConfig, error) {
-
 	fmt.Printf("获取 %s 的 IPPORT配置信息 \n", podName)
-
-	config := NetConfig{}
+	// todo fakeStr改为实际的http请求获取
 	fakeStr := `{
   "ExternalIPs": [
     "192.168.1.1",
@@ -43,6 +40,7 @@ func getNetConfig(podName string) (*NetConfig, error) {
     }
   ]
 }`
+	config := NetConfig{}
 	e := json.Unmarshal([]byte(fakeStr), &config)
 
 	if e != nil {

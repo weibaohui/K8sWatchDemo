@@ -5,7 +5,6 @@ import (
 	"fmt"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type Action struct {
@@ -78,14 +77,14 @@ func (h *Helper) isPodExists(ns, podName string) (*v1.Pod, error) {
 
 func (h *Helper) createSvc(ns, podName string) {
 	svcName := utils.GetSvcName(podName)
-	ipports, e := getIpPort()
+	config, e := getNetConfig(podName)
 	if e != nil {
 		fmt.Println("创建 SVC 失败", svcName)
 		fmt.Println(e.Error())
 		return
 	}
 
-	fmt.Println(ipports)
+	fmt.Println(config)
 
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
@@ -95,13 +94,11 @@ func (h *Helper) createSvc(ns, podName string) {
 		Spec: v1.ServiceSpec{
 			Type: v1.ServiceTypeNodePort,
 			// ClusterIP: v1.ClusterIPNone,
+			ExternalIPs: config.ExternalIPs,
 			Selector: map[string]string{
 				"podName": podName,
 			},
-			Ports: []v1.ServicePort{
-				{Name: "web", Port: 8080, TargetPort: intstr.FromInt(80)},
-				{Name: "test", Port: 8081, TargetPort: intstr.FromInt(81)},
-			},
+			Ports: config.ServicePorts,
 		},
 	}
 

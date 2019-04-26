@@ -4,8 +4,6 @@ import (
 	"K8sWatchDemo/pkg"
 	"K8sWatchDemo/utils"
 	"fmt"
-	"strings"
-
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -42,17 +40,14 @@ func (c *Controller) processNextItem() bool {
 	return true
 }
 
-func isTarget(podName string) bool {
-	return strings.HasPrefix(podName, PodSelectorName+"-")
-}
 func (c *Controller) processEvent(act pkg.Action) error {
 	_, exists, err := c.indexer.GetByKey(act.PodNameNs)
 	if err != nil {
 		return err
 	}
 
-	_, podName := utils.GetPodName(act.PodNameNs)
-	if !isTarget(podName) {
+	namespace, podName := utils.GetPodName(act.PodNameNs)
+	if !isTarget(namespace, podName, isTargetByPodName) {
 		return nil
 	}
 

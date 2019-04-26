@@ -31,7 +31,7 @@ func (h *Helper) UpdateProcess(podNameNs string) {
 
 }
 
-// 新增POD的处理逻辑
+// 新增POD的处理逻辑，第一次启动初始化时也会进入次程序
 func (h *Helper) AddProcess(podNameNs string) {
 	ns, podName := utils.GetPodName(podNameNs)
 
@@ -39,12 +39,11 @@ func (h *Helper) AddProcess(podNameNs string) {
 	if pod, e := h.isPodExists(ns, podName); e == nil {
 		for e := range pod.Status.ContainerStatuses {
 			status := pod.Status.ContainerStatuses[e]
-			// 如果pod 崩溃了，应该删除svc
+			// 如果pod 没有准备好，应该删除svc
 			if !status.Ready {
 				h.deleteSvc(ns, podName)
 				return
 			}
-
 		}
 	}
 

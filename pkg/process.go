@@ -78,6 +78,15 @@ func (h *Helper) isPodExists(ns, podName string) (*v1.Pod, error) {
 
 func (h *Helper) createSvc(ns, podName string) {
 	svcName := utils.GetSvcName(podName)
+	ipports, e := getIpPort()
+	if e != nil {
+		fmt.Println("创建 SVC 失败", svcName)
+		fmt.Println(e.Error())
+		return
+	}
+
+	fmt.Println(ipports)
+
 	svc := &v1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      svcName,

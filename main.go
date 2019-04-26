@@ -20,8 +20,8 @@ func main() {
 
 func WebServer() {
 	for {
-		fmt.Println("web")
-		time.Sleep(time.Second * 2)
+		fmt.Println("web", time.Now())
+		time.Sleep(time.Second * 60)
 	}
 }
 

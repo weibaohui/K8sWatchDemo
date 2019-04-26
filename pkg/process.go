@@ -110,5 +110,4 @@ func (h *Helper) deleteSvc(ns, podName string) error {
 	svcName := utils.GetSvcName(podName)
 	fmt.Println("删除 SVC", svcName)
 	return h.Services(ns).Delete(svcName, &metav1.DeleteOptions{})
-
 }

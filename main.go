@@ -3,7 +3,6 @@ package main
 import (
 	"K8sWatchDemo/pkg"
 	"K8sWatchDemo/watcher"
-	"fmt"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
@@ -20,7 +19,7 @@ func main() {
 
 func WebServer() {
 	for {
-		fmt.Println("web", time.Now())
+		// fmt.Println("web", time.Now())
 		time.Sleep(time.Second * 60)
 	}
 

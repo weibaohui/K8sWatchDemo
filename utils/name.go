@@ -1,9 +1,15 @@
 package utils
 
 import (
-	v1 "k8s.io/api/core/v1"
 	"strings"
 )
+
+func GetNsSvcPodName(podNameNs string) (ns, svcName, podName string) {
+	ns, podName = GetPodName(podNameNs)
+	svcName = GetSvcName(podName)
+	return ns, svcName, podName
+
+}
 
 func GetPodName(podNameNs string) (namespace, podName string) {
 	if strings.Contains(podNameNs, "/") {
@@ -32,21 +38,4 @@ func GetCommonUID(podName string) (prefix, uid string) {
 		return
 	}
 	return "", ""
-}
-
-// 设置PodName为label
-func AddPodNameLabels(pod *v1.Pod) bool {
-
-	oldLabels := pod.GetLabels()
-	// 没有 PodNameNs
-	if oldLabels["podName"] == "" {
-		labels := make(map[string]string)
-		for e := range oldLabels {
-			labels[e] = oldLabels[e]
-		}
-		labels["podName"] = pod.Name
-		pod.SetLabels(labels)
-		return true
-	}
-	return false
 }

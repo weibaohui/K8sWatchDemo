@@ -1,9 +1,13 @@
 package pkg
 
 import (
+	"K8sWatchDemo/utils"
 	"flag"
+	"fmt"
+	coreV1 "k8s.io/api/core/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/kubernetes/typed/core/v1"
+	typeV1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"os"
@@ -29,13 +33,33 @@ func NewHelper() *Helper {
 func (h *Helper) RESTClient() rest.Interface {
 	return h.cli.CoreV1().RESTClient()
 }
-func (h *Helper) Pods(ns string) v1.PodInterface {
+func (h *Helper) Pods(ns string) typeV1.PodInterface {
 	return h.cli.CoreV1().Pods(ns)
 }
-func (h *Helper) Services(ns string) v1.ServiceInterface {
+func (h *Helper) Services(ns string) typeV1.ServiceInterface {
 	return h.cli.CoreV1().Services(ns)
 }
 
+func (h *Helper) GetPod(ns, podName string) (*coreV1.Pod, error) {
+	return h.Pods(ns).Get(podName, metaV1.GetOptions{})
+}
+
+// error = nil 说明获取正常，error != nil 说明获取发生错误
+func (h *Helper) GetService(ns, svcName string) (*coreV1.Service, error) {
+	return h.Services(ns).Get(svcName, metaV1.GetOptions{})
+}
+
+func (h *Helper) addPodNameToLabelIfAbsent(pod *coreV1.Pod) {
+	// 检查podName 是否设置了，更新podName
+	if utils.AddPodNameLabels(pod) {
+		pod, e := h.Pods(pod.Namespace).Update(pod)
+		if e != nil {
+			fmt.Println(e.Error())
+			return
+		}
+		fmt.Println("增加 PodNameNs 到 metadata.labels", pod.Name)
+	}
+}
 func getClient() *kubernetes.Clientset {
 	var kubeConfig *string
 	var inCluster *bool

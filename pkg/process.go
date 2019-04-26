@@ -4,7 +4,7 @@ import (
 	"K8sWatchDemo/utils"
 	"fmt"
 	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 type Action struct {
@@ -14,10 +14,9 @@ type Action struct {
 
 // 删除逻辑
 func (h *Helper) DeleteProcess(podNameNs string) {
-	ns, podName := utils.GetPodName(podNameNs)
-
+	ns, svcName, _ := utils.GetNsSvcPodName(podNameNs)
 	// 删除Service
-	e := h.deleteSvc(ns, podName)
+	e := h.deleteSvc(ns, svcName)
 	if e != nil {
 		fmt.Println(e.Error())
 	}
@@ -26,78 +25,47 @@ func (h *Helper) DeleteProcess(podNameNs string) {
 
 // 更新POD的处理逻辑
 func (h *Helper) UpdateProcess(podNameNs string) {
-	ns, podName := utils.GetPodName(podNameNs)
-	h.updatePodSelector(ns, podName)
+	ns, svcName, podName := utils.GetNsSvcPodName(podNameNs)
+
+	if pod, e := h.GetPod(ns, podName); e == nil {
+		h.addPodNameToLabelIfAbsent(pod)
+		// POD 存在，但是没有READY，删除SVC
+		if !h.isPodReady(pod) {
+			// 只有正常才能创建SVC,不正常应删除SVC
+			h.deleteSvc(ns, svcName)
+			return
+		}
+	}
 
 }
 
 // 新增POD的处理逻辑，第一次启动初始化时也会进入次程序
-func (h *Helper) AddProcess(podNameNs string) {
-	ns, podName := utils.GetPodName(podNameNs)
+func (h *Helper) AddProcess(pod *v1.Pod) {
+	ns, podName := pod.Namespace, pod.Name
+	svcName := utils.GetSvcName(podName)
 
-	// 检查pod状态
-	if pod, e := h.isPodExists(ns, podName); e == nil {
-		for e := range pod.Status.ContainerStatuses {
-			status := pod.Status.ContainerStatuses[e]
-			// 如果pod 没有准备好，应该删除svc
-			if !status.Ready {
-				// 判断具体的原因，
-				if status.State.Terminated != nil {
-					h.deleteSvc(ns, podName)
-					return
-				} else if status.State.Waiting != nil {
-					// todo 还有哪些状态需要清除SVC
-					fmt.Println("waiting 状态", status.State.Waiting.Reason)
-					if status.State.Waiting.Reason == "CrashLoopBackOff" {
-						h.deleteSvc(ns, podName)
-					}
-				}
+	// 如果程序初始化运行，会收到所有已经存在的POD，应该先检查POD状态
 
-			}
-		}
-	}
-
-	// 更新podName
-	h.updatePodSelector(ns, podName)
+	// 检查podName 是否设置了，更新podName
+	h.addPodNameToLabelIfAbsent(pod)
 
 	// 创建对应的SVC
-	if svc, e := h.isServiceExists(ns, podName); e == nil && svc == nil {
+	if _, e := h.GetService(ns, svcName); e != nil {
 		h.createSvc(ns, podName)
 	}
+
 }
 
-func (h *Helper) updatePodSelector(ns, podName string) {
-	if pod, e := h.isPodExists(ns, podName); e == nil {
-		// 增加了PodName Label，再更新
-		if utils.AddPodNameLabels(pod) {
-			_, e = h.Pods(ns).Update(pod)
-			if e != nil {
-				fmt.Println(e.Error())
-			}
-			fmt.Println("增加 PodNameNs 到 metadata.labels", podName)
+// 检查POD是否READY，
+func (h *Helper) isPodReady(pod *v1.Pod) bool {
+	for e := range pod.Status.ContainerStatuses {
+		status := pod.Status.ContainerStatuses[e]
+		// 如果pod 没有准备好，应该删除svc
+		if status.Ready == false {
+			return false
 		}
 	}
-}
-
-func (h *Helper) isServiceExists(ns, podName string) (*v1.Service, error) {
-	svcName := utils.GetSvcName(podName)
-	list, e := h.Services(ns).List(metav1.ListOptions{
-		FieldSelector: "metadata.name=" + svcName,
-		Limit:         1,
-	})
-	if e != nil {
-		return nil, e
-	}
-
-	if len(list.Items) == 0 {
-		return nil, e
-	}
-
-	return &list.Items[0], nil
-}
-
-func (h *Helper) isPodExists(ns, podName string) (*v1.Pod, error) {
-	return h.Pods(ns).Get(podName, metav1.GetOptions{})
+	return true
 }
 
 func (h *Helper) createSvc(ns, podName string) {
@@ -112,7 +80,7 @@ func (h *Helper) createSvc(ns, podName string) {
 	fmt.Println(config)
 
 	svc := &v1.Service{
-		ObjectMeta: metav1.ObjectMeta{
+		ObjectMeta: metaV1.ObjectMeta{
 			Name:      svcName,
 			Namespace: ns,
 		},
@@ -137,8 +105,7 @@ func (h *Helper) createSvc(ns, podName string) {
 
 }
 
-func (h *Helper) deleteSvc(ns, podName string) error {
-	svcName := utils.GetSvcName(podName)
+func (h *Helper) deleteSvc(ns, svcName string) error {
 	fmt.Println("删除 SVC", svcName)
-	return h.Services(ns).Delete(svcName, &metav1.DeleteOptions{})
+	return h.Services(ns).Delete(svcName, &metaV1.DeleteOptions{})
 }

@@ -4,6 +4,7 @@ import (
 	"K8sWatchDemo/pkg"
 	"K8sWatchDemo/utils"
 	"fmt"
+	v1 "k8s.io/api/core/v1"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -41,7 +42,7 @@ func (c *Controller) processNextItem() bool {
 }
 
 func (c *Controller) processEvent(act pkg.Action) error {
-	_, exists, err := c.indexer.GetByKey(act.PodNameNs)
+	obj, exists, err := c.indexer.GetByKey(act.PodNameNs)
 	if err != nil {
 		return err
 	}
@@ -53,7 +54,7 @@ func (c *Controller) processEvent(act pkg.Action) error {
 
 	switch act.ActionName {
 	case ADD:
-		c.helper.AddProcess(act.PodNameNs)
+		c.helper.AddProcess(obj.(*v1.Pod))
 	case DELETE:
 		if !exists {
 			c.helper.DeleteProcess(act.PodNameNs)

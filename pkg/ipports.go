@@ -18,7 +18,7 @@ type NetConfig struct {
 // todo 改为实际的
 func getNetConfig(podName string) (*NetConfig, error) {
 
-	fmt.Printf("获取 %fakeStr 的 IPPORT配置信息 \n", podName)
+	fmt.Printf("获取 %s 的 IPPORT配置信息 \n", podName)
 
 	config := NetConfig{}
 	fakeStr := `{

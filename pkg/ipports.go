@@ -50,17 +50,17 @@ func getNetConfig(podName string) (*NetConfig, error) {
 
 	// todo 加入 ExternalIPs ServicePorts 校验
 	config = NetConfig{
-		ExternalIPs: []string{"192.168.1.1", "192.168.1.2"},
+		ExternalIPs: []string{"192.168.65.3", "192.168.1.2"},
 		ServicePorts: []v1.ServicePort{
 			{
 				Name:       "web2",
-				Port:       8082,
+				Port:       fakePort(),
 				TargetPort: intstr.FromInt(80),
 				NodePort:   fakeNodePort(),
 				Protocol:   "TCP"},
 			{
 				Name:       "test3",
-				Port:       8083,
+				Port:       fakePort(),
 				TargetPort: intstr.FromInt(81),
 				NodePort:   fakeNodePort(),
 				Protocol:   "UDP"},
@@ -75,5 +75,12 @@ func getNetConfig(podName string) (*NetConfig, error) {
 func fakeNodePort() int32 {
 	i, _ := strconv.Atoi(strkit.RandomNumber(3))
 	i2 := i + 31000
+	return int32(i2)
+}
+
+// 8000 以上
+func fakePort() int32 {
+	i, _ := strconv.Atoi(strkit.RandomNumber(3))
+	i2 := i + 8000
 	return int32(i2)
 }

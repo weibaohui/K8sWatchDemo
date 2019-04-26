@@ -28,13 +28,30 @@ func (h *Helper) DeleteProcess(podNameNs string) {
 func (h *Helper) UpdateProcess(podNameNs string) {
 	ns, podName := utils.GetPodName(podNameNs)
 	h.updatePodSelector(ns, podName)
+
 }
 
 // 新增POD的处理逻辑
 func (h *Helper) AddProcess(podNameNs string) {
 	ns, podName := utils.GetPodName(podNameNs)
+
+	// 检查pod状态
+	if pod, e := h.isPodExists(ns, podName); e == nil {
+		for e := range pod.Status.ContainerStatuses {
+			status := pod.Status.ContainerStatuses[e]
+			// 如果pod 崩溃了，应该删除svc
+			if !status.Ready {
+				h.deleteSvc(ns, podName)
+				return
+			}
+
+		}
+	}
+
+	// 更新podName
 	h.updatePodSelector(ns, podName)
 
+	// 创建对应的SVC
 	if svc, e := h.isServiceExists(ns, podName); e == nil && svc == nil {
 		h.createSvc(ns, podName)
 	}
@@ -51,7 +68,6 @@ func (h *Helper) updatePodSelector(ns, podName string) {
 			fmt.Println("增加 PodNameNs 到 metadata.labels", podName)
 		}
 	}
-
 }
 
 func (h *Helper) isServiceExists(ns, podName string) (*v1.Service, error) {

@@ -16,29 +16,39 @@ type Action struct {
 func (h *Helper) DeleteProcess(podNameNs string) {
 	ns, svcName, _ := utils.GetNsSvcPodName(podNameNs)
 	// 删除Service
-	e := h.deleteSvc(ns, svcName)
-	if e != nil {
-		fmt.Println(e.Error())
-	}
-
+	h.deleteSvc(ns, svcName)
 }
 
 // 更新POD的处理逻辑
 // 每次POD的状态更新都会触发
+// 如
 func (h *Helper) UpdateProcess(podNameNs string) {
 	ns, svcName, podName := utils.GetNsSvcPodName(podNameNs)
 
 	if pod, e := h.GetPod(ns, podName); e == nil {
 		h.addPodNameToLabelIfAbsent(pod)
+
+		// 查看更新的状态
+		for _, v := range pod.Status.ContainerStatuses {
+			if v.State.Waiting != nil {
+				println(pod.Name, v.Name, v.State.Waiting.Reason)
+			}
+		}
+
 		// 根据POD 状态 创建或者删除SVC
 		if h.isPodReady(pod) {
-			// POD READY 且没有创建对应的SVC，应创建
+			// POD READY 且没有创建对应的SVC,应创建
 			if !h.IsServiceExists(ns, svcName) {
+				fmt.Printf("POD %s 已经ready,缺SVC,为其创建SVC \n", pod.Name)
 				h.createSvc(ns, podName)
 			}
 		} else {
-			// POD NOT READY, 应删除SVC
-			h.deleteSvc(ns, svcName)
+			// POD NOT READY,如果有SVC,应删除SVC
+			if h.IsServiceExists(ns, svcName) {
+				fmt.Printf("POD %s 没有ready,但已经为其创建了SVC,删除 \n", pod.Name)
+				h.deleteSvc(ns, svcName)
+			}
+
 		}
 	}
 
@@ -112,7 +122,9 @@ func (h *Helper) createSvc(ns, podName string) {
 
 }
 
-func (h *Helper) deleteSvc(ns, svcName string) error {
+func (h *Helper) deleteSvc(ns, svcName string) {
 	fmt.Println("删除 SVC", svcName)
-	return h.Services(ns).Delete(svcName, &metaV1.DeleteOptions{})
+	if e := h.Services(ns).Delete(svcName, &metaV1.DeleteOptions{}); e != nil {
+		fmt.Printf("删除 SVC %s 失败:%s\n", svcName, e.Error())
+	}
 }

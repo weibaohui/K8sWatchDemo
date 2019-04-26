@@ -44,9 +44,15 @@ func (h *Helper) GetPod(ns, podName string) (*coreV1.Pod, error) {
 	return h.Pods(ns).Get(podName, metaV1.GetOptions{})
 }
 
-// error = nil 说明获取正常，error != nil 说明获取发生错误
 func (h *Helper) GetService(ns, svcName string) (*coreV1.Service, error) {
 	return h.Services(ns).Get(svcName, metaV1.GetOptions{})
+}
+func (h *Helper) IsServiceExists(ns, svcName string) bool {
+	_, e := h.Services(ns).Get(svcName, metaV1.GetOptions{})
+	if e == nil {
+		return true
+	}
+	return false
 }
 
 func (h *Helper) addPodNameToLabelIfAbsent(pod *coreV1.Pod) {

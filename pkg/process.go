@@ -24,16 +24,21 @@ func (h *Helper) DeleteProcess(podNameNs string) {
 }
 
 // 更新POD的处理逻辑
+// 每次POD的状态更新都会触发
 func (h *Helper) UpdateProcess(podNameNs string) {
 	ns, svcName, podName := utils.GetNsSvcPodName(podNameNs)
 
 	if pod, e := h.GetPod(ns, podName); e == nil {
 		h.addPodNameToLabelIfAbsent(pod)
-		// POD 存在，但是没有READY，删除SVC
-		if !h.isPodReady(pod) {
-			// 只有正常才能创建SVC,不正常应删除SVC
+		// 根据POD 状态 创建或者删除SVC
+		if h.isPodReady(pod) {
+			// POD READY 且没有创建对应的SVC，应创建
+			if !h.IsServiceExists(ns, svcName) {
+				h.createSvc(ns, podName)
+			}
+		} else {
+			// POD NOT READY, 应删除SVC
 			h.deleteSvc(ns, svcName)
-			return
 		}
 	}
 
@@ -41,19 +46,21 @@ func (h *Helper) UpdateProcess(podNameNs string) {
 
 // 新增POD的处理逻辑，第一次启动初始化时也会进入次程序
 func (h *Helper) AddProcess(pod *v1.Pod) {
-	ns, podName := pod.Namespace, pod.Name
-	svcName := utils.GetSvcName(podName)
-
 	// 如果程序初始化运行，会收到所有已经存在的POD，应该先检查POD状态
 
 	// 检查podName 是否设置了，更新podName
 	h.addPodNameToLabelIfAbsent(pod)
 
-	// 创建对应的SVC
-	if _, e := h.GetService(ns, svcName); e != nil {
-		h.createSvc(ns, podName)
-	}
+	ns, podName := pod.Namespace, pod.Name
+	svcName := utils.GetSvcName(podName)
 
+	// not ready 但是已经有svc，删除，如果pod变回ready 会触发更新事件
+	if pod, e := h.GetPod(ns, podName); e == nil {
+		if !h.isPodReady(pod) && h.IsServiceExists(ns, svcName) {
+			fmt.Println("POD NOT READY,删除SVC", podName)
+			h.deleteSvc(ns, svcName)
+		}
+	}
 }
 
 // 检查POD是否READY，

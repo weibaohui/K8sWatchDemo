@@ -41,8 +41,18 @@ func (h *Helper) AddProcess(podNameNs string) {
 			status := pod.Status.ContainerStatuses[e]
 			// 如果pod 没有准备好，应该删除svc
 			if !status.Ready {
-				h.deleteSvc(ns, podName)
-				return
+				// 判断具体的原因，
+				if status.State.Terminated != nil {
+					h.deleteSvc(ns, podName)
+					return
+				} else if status.State.Waiting != nil {
+					// todo 还有哪些状态需要清除SVC
+					fmt.Println("waiting 状态", status.State.Waiting.Reason)
+					if status.State.Waiting.Reason == "CrashLoopBackOff" {
+						h.deleteSvc(ns, podName)
+					}
+				}
+
 			}
 		}
 	}

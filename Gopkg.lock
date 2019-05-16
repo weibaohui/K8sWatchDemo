@@ -102,6 +102,14 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:839c607b7f4c1ab4d5b10650bf77c9e889d82ca4ed0041d9016490556d6945df"
+  name = "github.com/weibaohui/go-kit"
+  packages = ["strkit"]
+  pruneopts = "UT"
+  revision = "6e119561e38d6bf234e16b3e8735040ff1f8c9a6"
+  version = "0.0.7"
+
+[[projects]]
   digest = "1:3f3a05ae0b95893d90b9b3b5afdb79a9b3d96e4e36e099d841ae602e4aca0da8"
   name = "golang.org/x/crypto"
   packages = ["ssh/terminal"]
@@ -403,6 +411,7 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/weibaohui/go-kit/strkit",
     "k8s.io/api/core/v1",
     "k8s.io/apimachinery/pkg/apis/meta/v1",
     "k8s.io/apimachinery/pkg/fields",
@@ -410,11 +419,11 @@
     "k8s.io/apimachinery/pkg/util/runtime",
     "k8s.io/apimachinery/pkg/util/wait",
     "k8s.io/client-go/kubernetes",
+    "k8s.io/client-go/kubernetes/typed/core/v1",
     "k8s.io/client-go/rest",
     "k8s.io/client-go/tools/cache",
     "k8s.io/client-go/tools/clientcmd",
     "k8s.io/client-go/util/workqueue",
-    "k8s.io/klog",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

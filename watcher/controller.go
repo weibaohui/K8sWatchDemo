@@ -2,9 +2,9 @@ package watcher
 
 import (
 	"K8sWatchDemo/pkg"
-	"K8sWatchDemo/utils"
 	"fmt"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/extensions/v1beta1"
 	"time"
 
 	"k8s.io/apimachinery/pkg/util/runtime"
@@ -27,7 +27,6 @@ func NewController(queue workqueue.RateLimitingInterface, indexer cache.Indexer,
 		queue:    queue,
 		helper:   helper,
 	}
-
 }
 
 func (c *Controller) processNextItem() bool {
@@ -47,20 +46,25 @@ func (c *Controller) processEvent(act pkg.Action) error {
 		return err
 	}
 
-	namespace, podName := utils.GetPodName(act.PodNameNs)
-	if !isTarget(namespace, podName, isTargetByPodName) {
-		return nil
+	switch obj.(type) {
+	case interface{}:
+	case v1.Service:
+		service := obj.(*v1.Service)
+		fmt.Println(service.Name)
+	case v1.LoadBalancerIngress:
+		ingress := obj.(*v1beta1.Ingress)
+		fmt.Println(ingress.Name)
 	}
 
 	switch act.ActionName {
 	case ADD:
-		c.helper.AddProcess(obj.(*v1.Pod))
+
 	case DELETE:
 		if !exists {
-			c.helper.DeleteProcess(act.PodNameNs)
+
 		}
 	case UPDATE:
-		c.helper.UpdateProcess(act.PodNameNs)
+
 	}
 
 	return nil

@@ -1,8 +1,7 @@
-package controller
+package config
 
 import "K8sWatchDemo/handler"
 
-// Resource contains resource configuration
 type Resource struct {
 	Deployment            bool `json:"deploy"`
 	ReplicationController bool `json:"rc"`

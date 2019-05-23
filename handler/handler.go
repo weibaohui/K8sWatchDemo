@@ -1,15 +1,14 @@
 package handler
 
 import (
-	"K8sWatchDemo/controller"
+	"K8sWatchDemo/event"
 	"fmt"
 )
 
 type Handler interface {
-	Init(c *controller.Config) error
 	ObjectCreated(obj interface{})
-	ObjectDeleted(event ResourceType)
-	ObjectUpdated(oldObj interface{}, event ResourceType)
+	ObjectDeleted(event event.InformerEvent)
+	ObjectUpdated(oldObj interface{}, event event.InformerEvent)
 }
 
 var Map = map[string]Handler{
@@ -31,23 +30,17 @@ var Map = map[string]Handler{
 type DefaultHandler struct {
 }
 
-func (d *DefaultHandler) Init(c *controller.Config) error {
-	fmt.Println("DefaultHandler init ")
-
-	return nil
-}
-
 func (d *DefaultHandler) ObjectCreated(obj interface{}) {
 	fmt.Println("DefaultHandler ObjectCreated ", obj)
 
 }
 
-func (d *DefaultHandler) ObjectDeleted(event ResourceType) {
+func (d *DefaultHandler) ObjectDeleted(event event.InformerEvent) {
 	fmt.Println("DefaultHandler ObjectDeleted ", event)
 
 }
 
-func (d *DefaultHandler) ObjectUpdated(oldObj interface{}, event ResourceType) {
+func (d *DefaultHandler) ObjectUpdated(oldObj interface{}, event event.InformerEvent) {
 	fmt.Println("DefaultHandler ObjectUpdated ", event)
 
 }

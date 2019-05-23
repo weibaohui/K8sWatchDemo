@@ -1,14 +1,15 @@
 package controller
 
 import (
+	"K8sWatchDemo/config"
 	"K8sWatchDemo/handler"
 )
 
 func Run() {
 
-	var conf = &Config{
+	var conf = &config.Config{
 		Handlers: handler.Map,
-		Resource: Resource{
+		Resource: config.Resource{
 			Deployment:            false,
 			ReplicationController: false,
 			ReplicaSet:            false,

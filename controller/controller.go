@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"K8sWatchDemo/config"
+	"K8sWatchDemo/event"
 	"K8sWatchDemo/handler"
 	"K8sWatchDemo/pkg"
 	"fmt"
@@ -30,14 +32,6 @@ const maxRetries = 5
 
 var serverStartTime time.Time
 
-// Event indicate the informerEvent
-type Event struct {
-	key          string
-	eventType    string
-	namespace    string
-	resourceType string
-}
-
 // Controller object
 type Controller struct {
 	logger       *logrus.Entry
@@ -47,7 +41,7 @@ type Controller struct {
 	eventHandler handler.Handler
 }
 
-func Start(conf *Config) {
+func Start(conf *config.Config) {
 	var kubeClient = pkg.NewHelper().GetKubeClient()
 
 	if conf.Resource.Pod {
@@ -330,35 +324,35 @@ func GetNamespace(key string) (namespace string) {
 }
 func newResourceController(client kubernetes.Interface, eventHandler handler.Handler, informer cache.SharedIndexInformer, resourceType string) *Controller {
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
-	var newEvent Event
+	var newEvent event.InformerEvent
 	var err error
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			newEvent.key, err = cache.MetaNamespaceKeyFunc(obj)
-			newEvent.eventType = "create"
-			newEvent.resourceType = resourceType
-			newEvent.namespace = GetNamespace(newEvent.key)
-			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("Processing add to %v: %s", resourceType, newEvent.key)
+			newEvent.Key, err = cache.MetaNamespaceKeyFunc(obj)
+			newEvent.EventType = "create"
+			newEvent.ResourceType = resourceType
+			newEvent.Namespace = GetNamespace(newEvent.Key)
+			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("Processing add to %v: %s", resourceType, newEvent.Key)
 			if err == nil {
 				queue.Add(newEvent)
 			}
 		},
 		UpdateFunc: func(old, new interface{}) {
-			newEvent.key, err = cache.MetaNamespaceKeyFunc(old)
-			newEvent.eventType = "update"
-			newEvent.resourceType = resourceType
-			newEvent.namespace = GetNamespace(newEvent.key)
-			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("Processing update to %v: %s", resourceType, newEvent.key)
+			newEvent.Key, err = cache.MetaNamespaceKeyFunc(old)
+			newEvent.EventType = "update"
+			newEvent.ResourceType = resourceType
+			newEvent.Namespace = GetNamespace(newEvent.Key)
+			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("Processing update to %v: %s", resourceType, newEvent.Key)
 			if err == nil {
 				queue.Add(newEvent)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			newEvent.key, err = cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-			newEvent.eventType = "delete"
-			newEvent.resourceType = resourceType
-			newEvent.namespace = GetNamespace(newEvent.key)
-			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("Processing delete to %v: %s", resourceType, newEvent.key)
+			newEvent.Key, err = cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+			newEvent.EventType = "delete"
+			newEvent.ResourceType = resourceType
+			newEvent.Namespace = GetNamespace(newEvent.Key)
+			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("Processing delete to %v: %s", resourceType, newEvent.Key)
 			if err == nil {
 				queue.Add(newEvent)
 			}
@@ -411,54 +405,43 @@ func (c *Controller) runWorker() {
 }
 
 func (c *Controller) processNextItem() bool {
-	newEvent, quit := c.queue.Get()
+	eve, quit := c.queue.Get()
 
 	if quit {
 		return false
 	}
-	defer c.queue.Done(newEvent)
-	err := c.processItem(newEvent.(Event))
+	defer c.queue.Done(eve)
+	err := c.processItem(eve.(event.InformerEvent))
 	if err == nil {
 		// No error, reset the rate limit counters
-		c.queue.Forget(newEvent)
-	} else if c.queue.NumRequeues(newEvent) < maxRetries {
-		c.logger.Errorf("Error processing %s (will retry): %v", newEvent.(Event).key, err)
-		c.queue.AddRateLimited(newEvent)
+		c.queue.Forget(eve)
+	} else if c.queue.NumRequeues(eve) < maxRetries {
+		c.logger.Errorf("Error processing %s (will retry): %v", eve.(event.InformerEvent).Key, err)
+		c.queue.AddRateLimited(eve)
 	} else {
 		// err != nil and too many retries
-		c.logger.Errorf("Error processing %s (giving up): %v", newEvent.(Event).key, err)
-		c.queue.Forget(newEvent)
+		c.logger.Errorf("Error processing %s (giving up): %v", eve.(event.InformerEvent).Key, err)
+		c.queue.Forget(eve)
 		utilruntime.HandleError(err)
 	}
 
 	return true
 }
 
-func (c *Controller) processItem(event Event) error {
-	obj, _, err := c.informer.GetIndexer().GetByKey(event.key)
+func (c *Controller) processItem(e event.InformerEvent) error {
+	obj, _, err := c.informer.GetIndexer().GetByKey(e.Key)
 	if err != nil {
-		return fmt.Errorf("获取 key %s 出错: %v", event.key, err)
+		return fmt.Errorf("获取 key %s 出错: %v", e.Key, err)
 	}
-
 	// process events based on its type
-	switch event.eventType {
+	switch e.EventType {
 	case "create":
 		c.eventHandler.ObjectCreated(obj)
 	case "update":
-		kbEvent := handler.ResourceType{
-			Kind:      event.resourceType,
-			Name:      event.key,
-			Namespace: event.namespace,
-		}
-		c.eventHandler.ObjectUpdated(obj, kbEvent)
+		c.eventHandler.ObjectUpdated(obj, e)
 		return nil
 	case "delete":
-		kbEvent := handler.ResourceType{
-			Kind:      event.resourceType,
-			Name:      event.key,
-			Namespace: event.namespace,
-		}
-		c.eventHandler.ObjectDeleted(kbEvent)
+		c.eventHandler.ObjectDeleted(e)
 		return nil
 	}
 	return nil

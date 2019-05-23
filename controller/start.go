@@ -1,31 +1,28 @@
 package controller
 
 import (
-	"log"
+	"K8sWatchDemo/handler"
 )
 
 func Run() {
-	var eventHandler = new(DefaultHandler)
 
 	var conf = &Config{
+		Handlers: handler.Map,
 		Resource: Resource{
-			Deployment:            true,
-			ReplicationController: true,
-			ReplicaSet:            true,
-			DaemonSet:             true,
+			Deployment:            false,
+			ReplicationController: false,
+			ReplicaSet:            false,
+			DaemonSet:             false,
 			Services:              true,
 			Pod:                   true,
-			Job:                   true,
-			PersistentVolume:      true,
-			Namespace:             true,
-			Secret:                true,
-			ConfigMap:             true,
-			Ingress:               true,
+			Job:                   false,
+			PersistentVolume:      false,
+			Namespace:             false,
+			Secret:                false,
+			ConfigMap:             false,
+			Ingress:               false,
 		},
 		Namespace: "",
 	}
-	if err := eventHandler.Init(conf); err != nil {
-		log.Fatal(err)
-	}
-	Start(conf, eventHandler)
+	Start(conf)
 }

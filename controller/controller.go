@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"K8sWatchDemo/handler"
 	"K8sWatchDemo/pkg"
 	"fmt"
 	"os"
@@ -43,10 +44,10 @@ type Controller struct {
 	clientset    kubernetes.Interface
 	queue        workqueue.RateLimitingInterface
 	informer     cache.SharedIndexInformer
-	eventHandler Handler
+	eventHandler handler.Handler
 }
 
-func Start(conf *Config, eventHandler Handler) {
+func Start(conf *Config) {
 	var kubeClient = pkg.NewHelper().GetKubeClient()
 
 	if conf.Resource.Pod {
@@ -64,7 +65,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "pod")
+		c := newResourceController(kubeClient, conf.Handlers["po"], informer, "pod")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -86,7 +87,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "daemonset")
+		c := newResourceController(kubeClient, conf.Handlers["ds"], informer, "daemonset")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -108,7 +109,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "replicaset")
+		c := newResourceController(kubeClient, conf.Handlers["rs"], informer, "replicaset")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -130,7 +131,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "service")
+		c := newResourceController(kubeClient, conf.Handlers["svc"], informer, "service")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -152,7 +153,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "deployment")
+		c := newResourceController(kubeClient, conf.Handlers["deploy"], informer, "deployment")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -174,7 +175,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "namespace")
+		c := newResourceController(kubeClient, conf.Handlers["ns"], informer, "namespace")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -196,7 +197,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "replication controller")
+		c := newResourceController(kubeClient, conf.Handlers["rc"], informer, "replication controller")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -218,7 +219,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "job")
+		c := newResourceController(kubeClient, conf.Handlers["job"], informer, "job")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -240,7 +241,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "persistent volume")
+		c := newResourceController(kubeClient, conf.Handlers["pv"], informer, "persistent volume")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -262,7 +263,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "secret")
+		c := newResourceController(kubeClient, conf.Handlers["secret"], informer, "secret")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -284,7 +285,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "configmap")
+		c := newResourceController(kubeClient, conf.Handlers["cm"], informer, "configmap")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -306,7 +307,7 @@ func Start(conf *Config, eventHandler Handler) {
 			cache.Indexers{},
 		)
 
-		c := newResourceController(kubeClient, eventHandler, informer, "ingress")
+		c := newResourceController(kubeClient, conf.Handlers["ing"], informer, "ingress")
 		stopCh := make(chan struct{})
 		defer close(stopCh)
 
@@ -327,7 +328,7 @@ func GetNamespace(key string) (namespace string) {
 	}
 	return ""
 }
-func newResourceController(client kubernetes.Interface, eventHandler Handler, informer cache.SharedIndexInformer, resourceType string) *Controller {
+func newResourceController(client kubernetes.Interface, eventHandler handler.Handler, informer cache.SharedIndexInformer, resourceType string) *Controller {
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 	var newEvent Event
 	var err error
@@ -433,29 +434,29 @@ func (c *Controller) processNextItem() bool {
 	return true
 }
 
-func (c *Controller) processItem(newEvent Event) error {
-	obj, _, err := c.informer.GetIndexer().GetByKey(newEvent.key)
+func (c *Controller) processItem(event Event) error {
+	obj, _, err := c.informer.GetIndexer().GetByKey(event.key)
 	if err != nil {
-		return fmt.Errorf("获取 key %s 出错: %v", newEvent.key, err)
+		return fmt.Errorf("获取 key %s 出错: %v", event.key, err)
 	}
 
 	// process events based on its type
-	switch newEvent.eventType {
+	switch event.eventType {
 	case "create":
 		c.eventHandler.ObjectCreated(obj)
 	case "update":
-		kbEvent := KubeEvent{
-			Kind:      newEvent.resourceType,
-			Name:      newEvent.key,
-			Namespace: newEvent.namespace,
+		kbEvent := handler.ResourceType{
+			Kind:      event.resourceType,
+			Name:      event.key,
+			Namespace: event.namespace,
 		}
 		c.eventHandler.ObjectUpdated(obj, kbEvent)
 		return nil
 	case "delete":
-		kbEvent := KubeEvent{
-			Kind:      newEvent.resourceType,
-			Name:      newEvent.key,
-			Namespace: newEvent.namespace,
+		kbEvent := handler.ResourceType{
+			Kind:      event.resourceType,
+			Name:      event.key,
+			Namespace: event.namespace,
 		}
 		c.eventHandler.ObjectDeleted(kbEvent)
 		return nil

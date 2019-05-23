@@ -1,8 +1,10 @@
 package controller
 
+import "K8sWatchDemo/handler"
+
 // Resource contains resource configuration
 type Resource struct {
-	Deployment            bool `json:"deployment"`
+	Deployment            bool `json:"deploy"`
 	ReplicationController bool `json:"rc"`
 	ReplicaSet            bool `json:"rs"`
 	DaemonSet             bool `json:"ds"`
@@ -17,7 +19,7 @@ type Resource struct {
 }
 
 type Config struct {
-	Handler   Handler  `json:"handler"`
-	Resource  Resource `json:"resource"`
-	Namespace string   `json:"namespace,omitempty"`
+	Handlers  map[string]handler.Handler `json:"handlers"`
+	Resource  Resource                   `json:"resource"`
+	Namespace string                     `json:"namespace,omitempty"`
 }

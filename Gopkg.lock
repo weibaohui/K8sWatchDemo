@@ -154,6 +154,14 @@
   version = "v1.0.3"
 
 [[projects]]
+  digest = "1:79322a0a5178f41f153000199758cfe7c3f2ee23bd8fe6400ba26133d3f61094"
+  name = "github.com/weibaohui/go-kit"
+  packages = ["httpkit"]
+  pruneopts = "UT"
+  revision = "6e119561e38d6bf234e16b3e8735040ff1f8c9a6"
+  version = "0.0.7"
+
+[[projects]]
   branch = "master"
   digest = "1:bbe51412d9915d64ffaa96b51d409e070665efc5194fcf145c4a27d4133107a4"
   name = "golang.org/x/crypto"
@@ -483,7 +491,10 @@
   analyzer-version = 1
   input-imports = [
     "github.com/emicklei/go-restful",
+    "github.com/konsorten/go-windows-terminal-sequences",
     "github.com/sirupsen/logrus",
+    "github.com/weibaohui/go-kit/httpkit",
+    "golang.org/x/sys/unix",
     "golang.org/x/tools/go/ssa/interp/testdata/src/errors",
     "gotest.tools/assert",
     "k8s.io/api/apps/v1beta1",

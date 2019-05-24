@@ -14,11 +14,13 @@ var nodeports = sync.Map{}
 var eipports = sync.Map{}
 
 func main() {
+	utils.SyncIPConfig()
+
 	go pkg.Start()
 
 	go webservice.Start()
 
-	go utils.AutoCheck()
+	go utils.AutoCheckPorts()
 	// go ApiWatchStart()
 	// go printUsedPorts(&nodeports)
 	// go printUsedPorts(&eipports)

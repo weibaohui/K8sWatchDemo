@@ -45,6 +45,7 @@ func addPortConfigs(svc *v1.Service) {
 					IP:          nip,
 					Port:        p.NodePort,
 					TargetPort:  p.TargetPort,
+					Protocol:    string(p.Protocol),
 					PortType:    cluster.PORT_TYPE_NODE_PORT,
 				})
 			}
@@ -59,6 +60,7 @@ func addPortConfigs(svc *v1.Service) {
 					IP:          eip,
 					Port:        p.Port,
 					TargetPort:  p.TargetPort,
+					Protocol:    string(p.Protocol),
 					PortType:    cluster.PORT_TYPE_EIP_PORT,
 				})
 			}

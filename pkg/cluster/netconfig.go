@@ -20,12 +20,13 @@ type IpPortConfig struct {
 	Namespace      string             `json:"namespace"`
 	ServiceName    string             `json:"service_name"` // 一版SVC
 	IngressSvcName string             `json:"ingress_name"` // ingress nginx L4 使用的SVC
-	PodName        string             `json:"pod_name"`
 	IP             string             `json:"ip"`
 	Port           int32              `json:"port"`
+	Protocol       string             `json:"protocol"`
 	PortType       string             `json:"port_type"`
 	TargetPort     intstr.IntOrString `json:"target_port"`
 	Linkable       bool               `json:"linkable"`
+	LastLinkTime   string             `json:"last_link_time"` //最后检测存活时间
 }
 
 var o sync.Once
@@ -69,7 +70,7 @@ func (c *clusterConfig) DeleteSvc(ns string, svcName string) {
 }
 
 // 删除 Ingress-nginx L4 中使用的 svc
-func (c *clusterConfig) ClearIngressSvc() {
+func (c *clusterConfig) ClearIngressSvc(protocol string) {
 	c.w.Lock()
 	defer c.w.Unlock()
 	if len(c.List) == 0 {
@@ -78,7 +79,7 @@ func (c *clusterConfig) ClearIngressSvc() {
 	}
 	for k := 0; k < len(c.List); k++ {
 		v := c.List[k]
-		if v.PortType == PORT_TYPE_INGRESS_NGINX_PORT {
+		if v.PortType == PORT_TYPE_INGRESS_NGINX_PORT && v.Protocol == protocol {
 			//前面的不动，隔一个，再拼上后面的,k需要减1，因为后面的元素index,往前移动了一个
 			c.List = append(c.List[:k], c.List[k+1:]...)
 			k--

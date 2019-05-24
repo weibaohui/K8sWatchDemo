@@ -2,6 +2,7 @@ package utils
 
 import (
 	"gotest.tools/assert"
+	"strings"
 	"testing"
 )
 
@@ -25,7 +26,7 @@ func TestCheck(t *testing.T) {
 	}
 
 	for k, v := range list {
-		result, err := Check(v.NetWork, v.Address)
+		result, err := Check(strings.ToLower(v.NetWork), v.Address)
 		if err != nil {
 			t.Errorf(err.Error())
 		}

@@ -28,15 +28,31 @@ func (h *ConfigMapHandler) ObjectCreated(obj interface{}) {
 	if len(cm.Data) == 0 {
 		return
 	}
+
+	protocol := "TCP"
+	if cm.Name == "udp-services" {
+		protocol = "UDP"
+	}
+
 	//先删除所有的
-	cluster.GetClusterConfig().ClearIngressSvc()
-	addIngressSvc(cm.Data)
+	cluster.GetClusterConfig().ClearIngressSvc(protocol)
+	addIngressSvc(cm.Data, protocol)
 
 	h.logger.Infoln("add", cm.Name)
 }
 func (h *ConfigMapHandler) ObjectDeleted(event event.InformerEvent) {
 	//要删除所有的
-	cluster.GetClusterConfig().ClearIngressSvc()
+	if event.Name != "tcp-services" && event.Name != "udp-services" {
+		return
+	}
+
+	protocol := "TCP"
+	if event.Name == "udp-services" {
+		protocol = "UDP"
+	}
+
+	cluster.GetClusterConfig().ClearIngressSvc(protocol)
+
 	h.logger.Infoln("delete", event)
 }
 
@@ -46,14 +62,19 @@ func (h *ConfigMapHandler) ObjectUpdated(oldObj interface{}, event event.Informe
 		return
 	}
 
-	cluster.GetClusterConfig().ClearIngressSvc()
+	protocol := "TCP"
+	if cm.Name == "udp-services" {
+		protocol = "UDP"
+	}
 
-	addIngressSvc(cm.Data)
+	cluster.GetClusterConfig().ClearIngressSvc(protocol)
+
+	addIngressSvc(cm.Data, protocol)
 
 	h.logger.Infoln("update", cm.Name)
 }
 
-func addIngressSvc(data map[string]string) {
+func addIngressSvc(data map[string]string, protocol string) {
 	// 8886 default/svc-2:8886
 	for _, v := range data {
 		ns, svcName, port, err := getNsNamePort(v)
@@ -62,12 +83,14 @@ func addIngressSvc(data map[string]string) {
 		}
 
 		for _, ip := range utils.IngressIPs() {
+
 			cluster.GetClusterConfig().Add(&cluster.IpPortConfig{
 				Namespace:      ns,
 				IngressSvcName: svcName,
 				IP:             ip,
 				Port:           port,
 				PortType:       cluster.PORT_TYPE_INGRESS_NGINX_PORT,
+				Protocol:       protocol,
 			})
 		}
 

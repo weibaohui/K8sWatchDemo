@@ -2,6 +2,7 @@ package main
 
 import (
 	"K8sWatchDemo/pkg"
+	"K8sWatchDemo/pkg/utils"
 	"K8sWatchDemo/pkg/webservice"
 	"fmt"
 
@@ -16,6 +17,8 @@ func main() {
 	go pkg.Start()
 
 	go webservice.Start()
+
+	go utils.AutoCheck()
 	// go ApiWatchStart()
 	// go printUsedPorts(&nodeports)
 	// go printUsedPorts(&eipports)

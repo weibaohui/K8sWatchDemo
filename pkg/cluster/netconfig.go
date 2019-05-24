@@ -69,7 +69,7 @@ func (c *clusterConfig) DeleteSvc(ns string, svcName string) {
 }
 
 // 删除 Ingress-nginx L4 中使用的 svc
-func (c *clusterConfig) DeleteIngressSvc(ns string, ingressSvcName string) {
+func (c *clusterConfig) ClearIngressSvc() {
 	c.w.Lock()
 	defer c.w.Unlock()
 	if len(c.List) == 0 {
@@ -78,7 +78,7 @@ func (c *clusterConfig) DeleteIngressSvc(ns string, ingressSvcName string) {
 	}
 	for k := 0; k < len(c.List); k++ {
 		v := c.List[k]
-		if v.Namespace == ns && v.IngressSvcName == ingressSvcName {
+		if v.PortType == PORT_TYPE_INGRESS_NGINX_PORT {
 			//前面的不动，隔一个，再拼上后面的,k需要减1，因为后面的元素index,往前移动了一个
 			c.List = append(c.List[:k], c.List[k+1:]...)
 			k--

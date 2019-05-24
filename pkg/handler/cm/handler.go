@@ -3,7 +3,6 @@ package cm
 import (
 	"K8sWatchDemo/pkg/cluster"
 	"K8sWatchDemo/pkg/event"
-	"fmt"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/tools/go/ssa/interp/testdata/src/errors"
 	v1 "k8s.io/api/core/v1"
@@ -18,14 +17,44 @@ type ConfigMapHandler struct {
 func (h *ConfigMapHandler) Init() {
 	h.logger = logrus.WithField("handler", "ConfigMapHandler")
 }
+
+//cm 监控的是整个CM的变更，不是某一个内部条目
 func (h *ConfigMapHandler) ObjectCreated(obj interface{}) {
 	cm := obj.(*v1.ConfigMap)
 	if cm.Name != "tcp-services" && cm.Name != "udp-services" {
 		return
 	}
+	if len(cm.Data) == 0 {
+		return
+	}
+	//先删除所有的
+	cluster.GetClusterConfig().ClearIngressSvc()
+	addIngressSvc(cm.Data)
+
+	h.logger.Infoln("add", cm.Name)
+}
+func (h *ConfigMapHandler) ObjectDeleted(event event.InformerEvent) {
+	//要删除所有的
+	cluster.GetClusterConfig().ClearIngressSvc()
+	h.logger.Infoln("delete", event)
+}
+
+func (h *ConfigMapHandler) ObjectUpdated(oldObj interface{}, event event.InformerEvent) {
+	cm := oldObj.(*v1.ConfigMap)
+	if cm.Name != "tcp-services" && cm.Name != "udp-services" {
+		return
+	}
+
+	cluster.GetClusterConfig().ClearIngressSvc()
+
+	addIngressSvc(cm.Data)
+
+	h.logger.Infoln("update", cm.Name)
+}
+
+func addIngressSvc(data map[string]string) {
 	// 8886 default/svc-2:8886
-	for k, v := range cm.Data {
-		fmt.Println(k, v)
+	for _, v := range data {
 		ns, svcName, port, err := getNsNamePort(v)
 		if err != nil {
 			return
@@ -39,25 +68,6 @@ func (h *ConfigMapHandler) ObjectCreated(obj interface{}) {
 			PortType:       cluster.PORT_TYPE_INGRESS_NGINX_PORT,
 		})
 	}
-	h.logger.Infoln("add", cm.Name)
-}
-func (h *ConfigMapHandler) ObjectDeleted(event event.InformerEvent) {
-	//要删除所有的
-	h.logger.Infoln("delete", event)
-}
-
-func (h *ConfigMapHandler) ObjectUpdated(oldObj interface{}, event event.InformerEvent) {
-	cm := oldObj.(*v1.ConfigMap)
-	if cm.Name != "tcp-services" && cm.Name != "udp-services" {
-		return
-	}
-	if len(cm.Data) == 0 {
-		//要删除所有的
-	}
-	for k, v := range cm.Data {
-		fmt.Println(k, v)
-	}
-	h.logger.Infoln("update", cm.Name)
 }
 
 func getNsNamePort(item string) (ns, svcName string, port int32, err error) {

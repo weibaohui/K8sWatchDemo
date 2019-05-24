@@ -21,11 +21,9 @@ func (h *HeadlessPodHandler) ObjectCreated(obj interface{}) {
 
 func (h *HeadlessPodHandler) ObjectDeleted(event event.InformerEvent) {
 	h.logger.Infoln("delete", event)
-
 }
 
 func (h *HeadlessPodHandler) ObjectUpdated(oldObj interface{}, event event.InformerEvent) {
 	pod := oldObj.(*v1.Pod)
 	h.logger.Infoln("update", pod.Name)
-
 }

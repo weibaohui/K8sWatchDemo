@@ -42,6 +42,7 @@ func (h *ConfigMapHandler) ObjectCreated(obj interface{}) {
 	h.logger.Infoln("add", cm.Name)
 }
 func (h *ConfigMapHandler) ObjectDeleted(event event.InformerEvent) {
+	//要删除所有的
 	h.logger.Infoln("delete", event)
 }
 
@@ -49,6 +50,9 @@ func (h *ConfigMapHandler) ObjectUpdated(oldObj interface{}, event event.Informe
 	cm := oldObj.(*v1.ConfigMap)
 	if cm.Name != "tcp-services" && cm.Name != "udp-services" {
 		return
+	}
+	if len(cm.Data) == 0 {
+		//要删除所有的
 	}
 	for k, v := range cm.Data {
 		fmt.Println(k, v)

@@ -7,13 +7,16 @@ import (
 )
 
 func Start() {
+	container := restful.NewContainer()
+
 	ws := new(restful.WebService)
 	ws.Route(ws.GET("/index/{id}").
 		To(index).
 		Produces(restful.MIME_JSON).
 		Doc("主页"))
-	restful.Add(ws)
-	log.Fatal(http.ListenAndServe(":9999", nil))
+
+	container.Add(ws)
+	log.Fatal(http.ListenAndServe(":9999", container))
 
 }
 

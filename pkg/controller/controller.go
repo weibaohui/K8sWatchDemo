@@ -1,10 +1,10 @@
 package controller
 
 import (
-	"K8sWatchDemo/config"
-	"K8sWatchDemo/event"
-	"K8sWatchDemo/handler"
-	"K8sWatchDemo/pkg"
+	"K8sWatchDemo/pkg/config"
+	"K8sWatchDemo/pkg/event"
+	"K8sWatchDemo/pkg/handler"
+	"K8sWatchDemo/pkg/utils"
 	"fmt"
 	"os"
 	"os/signal"
@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	apps_v1beta1 "k8s.io/api/apps/v1beta1"
 	batch_v1 "k8s.io/api/batch/v1"
@@ -30,9 +30,6 @@ import (
 
 const maxRetries = 5
 
-var serverStartTime time.Time
-
-// Controller object
 type Controller struct {
 	logger       *logrus.Entry
 	clientset    kubernetes.Interface
@@ -42,7 +39,11 @@ type Controller struct {
 }
 
 func Start(conf *config.Config) {
-	var kubeClient = pkg.NewHelper().GetKubeClient()
+	var kubeClient = utils.NewHelper().GetKubeClient()
+
+	for _, v := range conf.Handlers {
+		v.Init()
+	}
 
 	if conf.Resource.Pod {
 		informer := cache.NewSharedIndexInformer(
@@ -64,6 +65,27 @@ func Start(conf *config.Config) {
 		defer close(stopCh)
 
 		go c.Run(stopCh)
+
+		informerHeadless := cache.NewSharedIndexInformer(
+			&cache.ListWatch{
+				ListFunc: func(options meta_v1.ListOptions) (runtime.Object, error) {
+					return kubeClient.CoreV1().Pods(conf.Namespace).List(options)
+				},
+				WatchFunc: func(options meta_v1.ListOptions) (watch.Interface, error) {
+					return kubeClient.CoreV1().Pods(conf.Namespace).Watch(options)
+				},
+			},
+			&api_v1.Pod{},
+			0,
+			cache.Indexers{},
+		)
+
+		hc := newResourceController(kubeClient, conf.Handlers["headless-po"], informerHeadless, "pod")
+		stopChHc := make(chan struct{})
+		defer close(stopChHc)
+
+		go hc.Run(stopCh)
+
 	}
 
 	if conf.Resource.DaemonSet {
@@ -324,37 +346,37 @@ func GetNamespace(key string) (namespace string) {
 }
 func newResourceController(client kubernetes.Interface, eventHandler handler.Handler, informer cache.SharedIndexInformer, resourceType string) *Controller {
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
-	var newEvent event.InformerEvent
+	var eve event.InformerEvent
 	var err error
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			newEvent.Key, err = cache.MetaNamespaceKeyFunc(obj)
-			newEvent.EventType = "create"
-			newEvent.ResourceType = resourceType
-			newEvent.Namespace = GetNamespace(newEvent.Key)
-			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("Processing add to %v: %s", resourceType, newEvent.Key)
+			eve.Key, err = cache.MetaNamespaceKeyFunc(obj)
+			eve.EventType = "create"
+			eve.ResourceType = resourceType
+			eve.Namespace = GetNamespace(eve.Key)
+			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("新增 %v: %s", resourceType, eve.Key)
 			if err == nil {
-				queue.Add(newEvent)
+				queue.Add(eve)
 			}
 		},
 		UpdateFunc: func(old, new interface{}) {
-			newEvent.Key, err = cache.MetaNamespaceKeyFunc(old)
-			newEvent.EventType = "update"
-			newEvent.ResourceType = resourceType
-			newEvent.Namespace = GetNamespace(newEvent.Key)
-			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("Processing update to %v: %s", resourceType, newEvent.Key)
+			eve.Key, err = cache.MetaNamespaceKeyFunc(old)
+			eve.EventType = "update"
+			eve.ResourceType = resourceType
+			eve.Namespace = GetNamespace(eve.Key)
+			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("更新 %v: %s", resourceType, eve.Key)
 			if err == nil {
-				queue.Add(newEvent)
+				queue.Add(eve)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			newEvent.Key, err = cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
-			newEvent.EventType = "delete"
-			newEvent.ResourceType = resourceType
-			newEvent.Namespace = GetNamespace(newEvent.Key)
-			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("Processing delete to %v: %s", resourceType, newEvent.Key)
+			eve.Key, err = cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
+			eve.EventType = "delete"
+			eve.ResourceType = resourceType
+			eve.Namespace = GetNamespace(eve.Key)
+			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("删除 %v: %s", resourceType, eve.Key)
 			if err == nil {
-				queue.Add(newEvent)
+				queue.Add(eve)
 			}
 		},
 	})
@@ -373,17 +395,16 @@ func (c *Controller) Run(stopCh <-chan struct{}) {
 	defer utilruntime.HandleCrash()
 	defer c.queue.ShutDown()
 
-	c.logger.Info("Starting k8swatch controller")
-	serverStartTime = time.Now().Local()
+	c.logger.Info("监控程序启动")
 
 	go c.informer.Run(stopCh)
 
 	if !cache.WaitForCacheSync(stopCh, c.HasSynced) {
-		utilruntime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
+		utilruntime.HandleError(fmt.Errorf("等待缓存同步超时"))
 		return
 	}
 
-	c.logger.Info("k8swatch controller synced and ready")
+	c.logger.Info("监控程序 已完成同步，开始工作")
 
 	wait.Until(c.runWorker, time.Second, stopCh)
 }
@@ -400,7 +421,7 @@ func (c *Controller) LastSyncResourceVersion() string {
 
 func (c *Controller) runWorker() {
 	for c.processNextItem() {
-		// continue looping
+
 	}
 }
 
@@ -413,14 +434,12 @@ func (c *Controller) processNextItem() bool {
 	defer c.queue.Done(eve)
 	err := c.processItem(eve.(event.InformerEvent))
 	if err == nil {
-		// No error, reset the rate limit counters
 		c.queue.Forget(eve)
 	} else if c.queue.NumRequeues(eve) < maxRetries {
-		c.logger.Errorf("Error processing %s (will retry): %v", eve.(event.InformerEvent).Key, err)
+		c.logger.Errorf("处理 %s 出错，进行重试: %v", eve.(event.InformerEvent).Key, err)
 		c.queue.AddRateLimited(eve)
 	} else {
-		// err != nil and too many retries
-		c.logger.Errorf("Error processing %s (giving up): %v", eve.(event.InformerEvent).Key, err)
+		c.logger.Errorf("处理 %s 出错，丢弃: %v", eve.(event.InformerEvent).Key, err)
 		c.queue.Forget(eve)
 		utilruntime.HandleError(err)
 	}
@@ -433,7 +452,6 @@ func (c *Controller) processItem(e event.InformerEvent) error {
 	if err != nil {
 		return fmt.Errorf("获取 key %s 出错: %v", e.Key, err)
 	}
-	// process events based on its type
 	switch e.EventType {
 	case "create":
 		c.eventHandler.ObjectCreated(obj)

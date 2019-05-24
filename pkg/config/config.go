@@ -1,6 +1,8 @@
 package config
 
-import "K8sWatchDemo/handler"
+import (
+	"K8sWatchDemo/pkg/handler"
+)
 
 type Resource struct {
 	Deployment            bool `json:"deploy"`

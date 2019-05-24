@@ -1,11 +1,12 @@
-package controller
+package pkg
 
 import (
-	"K8sWatchDemo/config"
-	"K8sWatchDemo/handler"
+	"K8sWatchDemo/pkg/config"
+	"K8sWatchDemo/pkg/controller"
+	"K8sWatchDemo/pkg/handler"
 )
 
-func Run() {
+func Start() {
 
 	var conf = &config.Config{
 		Handlers: handler.Map,
@@ -25,5 +26,5 @@ func Run() {
 		},
 		Namespace: "",
 	}
-	Start(conf)
+	controller.Start(conf)
 }

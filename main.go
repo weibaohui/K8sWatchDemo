@@ -1,7 +1,7 @@
 package main
 
 import (
-	"K8sWatchDemo/controller"
+	"K8sWatchDemo/pkg"
 	"fmt"
 
 	"sync"
@@ -12,7 +12,7 @@ var nodeports = sync.Map{}
 var eipports = sync.Map{}
 
 func main() {
-	go controller.Run()
+	go pkg.Start()
 
 	// go ApiWatchStart()
 	// go printUsedPorts(&nodeports)

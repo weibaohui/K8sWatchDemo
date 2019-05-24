@@ -9,12 +9,11 @@ import (
 )
 
 func Check(network, address string) (bool, error) {
-	_, e := net.DialTimeout(network, address, time.Second*3)
+	_, e := net.DialTimeout(network, address, time.Second*10)
 	if e != nil {
 		fmt.Println(e.Error())
 		return false, e
 	}
-
 	return true, nil
 }
 
@@ -27,7 +26,7 @@ func AutoCheck() {
 			fmt.Println("2分钟一次，到点啦")
 			for _, v := range cluster.GetClusterConfig().List {
 				result, e := Check(strings.ToLower(v.Protocol), fmt.Sprintf("%s:%d", v.IP, v.Port))
-				if result &&  e != nil {
+				if result &&  e == nil {
 					v.Linkable = true
 				} else {
 					v.Linkable = false

@@ -21,7 +21,7 @@ func Start() {
 			PersistentVolume:      false,
 			Namespace:             false,
 			Secret:                false,
-			ConfigMap:             false,
+			ConfigMap:             true,
 			Ingress:               false,
 		},
 		Namespace: "",

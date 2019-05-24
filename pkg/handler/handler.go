@@ -2,6 +2,7 @@ package handler
 
 import (
 	"K8sWatchDemo/pkg/event"
+	"K8sWatchDemo/pkg/handler/cm"
 	"K8sWatchDemo/pkg/handler/pod"
 	"K8sWatchDemo/pkg/handler/pod/headless"
 	"K8sWatchDemo/pkg/handler/svc"
@@ -26,7 +27,7 @@ var Map = map[string]Handler{
 	"headless-po": &headless.HeadlessPodHandler{},
 	"job":         &DefaultHandler{},
 	"pv":          &DefaultHandler{},
-	"cm":          &DefaultHandler{},
+	"cm":          &cm.ConfigMapHandler{},
 	"ns":          &DefaultHandler{},
 	"ing":         &DefaultHandler{},
 	"secret":      &DefaultHandler{},

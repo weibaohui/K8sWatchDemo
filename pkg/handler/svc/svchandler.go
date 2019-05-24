@@ -40,12 +40,9 @@ func addPortConfigs(svc *v1.Service) {
 			cluster.GetClusterConfig().Add(&cluster.IpPortConfig{
 				Namespace:   svc.Namespace,
 				ServiceName: svc.Name,
-				IngressName: "",
-				PodName:     "",
 				IP:          "",
 				Port:        p.NodePort,
 				TargetPort:  p.TargetPort,
-				Linkable:    false,
 				PortType:    cluster.PORT_TYPE_NODE_PORT,
 			})
 		}
@@ -55,11 +52,8 @@ func addPortConfigs(svc *v1.Service) {
 				cluster.GetClusterConfig().Add(&cluster.IpPortConfig{
 					Namespace:   svc.Namespace,
 					ServiceName: svc.Name,
-					IngressName: "",
-					PodName:     "",
 					IP:          eip,
 					Port:        p.Port,
-					Linkable:    false,
 					TargetPort:  p.TargetPort,
 					PortType:    cluster.PORT_TYPE_EIP_PORT,
 				})

@@ -9,13 +9,12 @@ import (
 )
 
 func Check(network, address string) (bool, error) {
-	conn, e := net.DialTimeout(network, address, time.Second*3)
+	_, e := net.DialTimeout(network, address, time.Second*3)
 	if e != nil {
 		fmt.Println(e.Error())
 		return false, e
 	}
 
-	defer conn.Close()
 	return true, nil
 }
 

@@ -11,9 +11,8 @@ type clusterConfig struct {
 }
 
 const (
-	PORT_TYPE_NODE_PORT    = "NodePort"
-	PORT_TYPE_EIP_PORT     = "EIPPort"
-	PORT_TYPE_INGRESS_PORT = "IngressPort"
+	PORT_TYPE_NODE_PORT = "NodePort"
+	PORT_TYPE_EIP_PORT  = "EIPPort"
 )
 
 type IpPortConfig struct {
@@ -65,5 +64,4 @@ func (c *clusterConfig) DeleteSvc(ns string, svcName string) {
 			k--
 		}
 	}
-
 }

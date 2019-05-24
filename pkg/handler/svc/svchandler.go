@@ -3,6 +3,7 @@ package svc
 import (
 	"K8sWatchDemo/pkg/cluster"
 	"K8sWatchDemo/pkg/event"
+	"K8sWatchDemo/pkg/utils"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
 )
@@ -36,15 +37,18 @@ func addPortConfigs(svc *v1.Service) {
 	for _, p := range svc.Spec.Ports {
 		if p.NodePort > 0 {
 			//存在NodePort
-			//todo 按集群内IP地址列表，逐个添加
-			cluster.GetClusterConfig().Add(&cluster.IpPortConfig{
-				Namespace:   svc.Namespace,
-				ServiceName: svc.Name,
-				IP:          "",
-				Port:        p.NodePort,
-				TargetPort:  p.TargetPort,
-				PortType:    cluster.PORT_TYPE_NODE_PORT,
-			})
+
+			for _, nip := range utils.NodeIPs() {
+				cluster.GetClusterConfig().Add(&cluster.IpPortConfig{
+					Namespace:   svc.Namespace,
+					ServiceName: svc.Name,
+					IP:          nip,
+					Port:        p.NodePort,
+					TargetPort:  p.TargetPort,
+					PortType:    cluster.PORT_TYPE_NODE_PORT,
+				})
+			}
+
 		}
 		if p.Port > 0 && len(svc.Spec.ExternalIPs) > 0 {
 			//开放了EIP EPort

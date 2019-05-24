@@ -3,6 +3,7 @@ package cm
 import (
 	"K8sWatchDemo/pkg/cluster"
 	"K8sWatchDemo/pkg/event"
+	"K8sWatchDemo/pkg/utils"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/tools/go/ssa/interp/testdata/src/errors"
 	v1 "k8s.io/api/core/v1"
@@ -59,14 +60,17 @@ func addIngressSvc(data map[string]string) {
 		if err != nil {
 			return
 		}
-		// todo 按所有ingress 的IP 地址 逐一添加
-		cluster.GetClusterConfig().Add(&cluster.IpPortConfig{
-			Namespace:      ns,
-			IngressSvcName: svcName,
-			IP:             "",
-			Port:           port,
-			PortType:       cluster.PORT_TYPE_INGRESS_NGINX_PORT,
-		})
+
+		for _, ip := range utils.IngressIPs() {
+			cluster.GetClusterConfig().Add(&cluster.IpPortConfig{
+				Namespace:      ns,
+				IngressSvcName: svcName,
+				IP:             ip,
+				Port:           port,
+				PortType:       cluster.PORT_TYPE_INGRESS_NGINX_PORT,
+			})
+		}
+
 	}
 }
 

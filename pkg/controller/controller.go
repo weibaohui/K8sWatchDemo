@@ -336,13 +336,14 @@ func Start(conf *config.Config) {
 	<-sigterm
 }
 
-func GetNamespace(key string) (namespace string) {
+func GetNamespace(key string) (namespace, name string) {
 	if strings.Contains(key, "/") {
 		names := strings.SplitN(key, "/", 2)
 		namespace = names[0]
+		name = names[1]
 		return
 	}
-	return ""
+	return "", ""
 }
 func newResourceController(client kubernetes.Interface, eventHandler handler.Handler, informer cache.SharedIndexInformer, resourceType string) *Controller {
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
@@ -353,7 +354,7 @@ func newResourceController(client kubernetes.Interface, eventHandler handler.Han
 			eve.Key, err = cache.MetaNamespaceKeyFunc(obj)
 			eve.EventType = "create"
 			eve.ResourceType = resourceType
-			eve.Namespace = GetNamespace(eve.Key)
+			eve.Namespace, eve.Name = GetNamespace(eve.Key)
 			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("新增 %v: %s", resourceType, eve.Key)
 			if err == nil {
 				queue.Add(eve)
@@ -363,7 +364,7 @@ func newResourceController(client kubernetes.Interface, eventHandler handler.Han
 			eve.Key, err = cache.MetaNamespaceKeyFunc(old)
 			eve.EventType = "update"
 			eve.ResourceType = resourceType
-			eve.Namespace = GetNamespace(eve.Key)
+			eve.Namespace, eve.Name = GetNamespace(eve.Key)
 			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("更新 %v: %s", resourceType, eve.Key)
 			if err == nil {
 				queue.Add(eve)
@@ -373,7 +374,7 @@ func newResourceController(client kubernetes.Interface, eventHandler handler.Han
 			eve.Key, err = cache.DeletionHandlingMetaNamespaceKeyFunc(obj)
 			eve.EventType = "delete"
 			eve.ResourceType = resourceType
-			eve.Namespace = GetNamespace(eve.Key)
+			eve.Namespace, eve.Name = GetNamespace(eve.Key)
 			logrus.WithField("pkg", "k8swatch-"+resourceType).Infof("删除 %v: %s", resourceType, eve.Key)
 			if err == nil {
 				queue.Add(eve)

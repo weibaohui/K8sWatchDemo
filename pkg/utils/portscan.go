@@ -21,6 +21,7 @@ func CheckPort(address string) (bool, error) {
 }
 
 func checkUpdate(v *cluster.IpPortConfig) {
+	//todo 增加一个list 更新方法，改为go 异步执行
 	result, _ := CheckPort(fmt.Sprintf("%s:%d", v.IP, v.Port))
 	if result {
 		v.Linkable = true

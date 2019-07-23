@@ -6,7 +6,7 @@ type Register struct {
 
 func (r *Register) Register(w *Watcher, stop chan struct{}) error {
 	for _, reg := range r.Handlers {
-		go reg(w, stop)
+		 reg(w, stop)
 	}
 	return nil
 }

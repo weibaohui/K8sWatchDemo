@@ -2,10 +2,12 @@ package mhl
 
 import (
 	"K8sWatchDemo/pkg/mhl/handler"
+	"K8sWatchDemo/pkg/mhl/starter"
+	"K8sWatchDemo/pkg/mhl/starter/deployment"
+	"K8sWatchDemo/pkg/mhl/starter/pod"
 	"K8sWatchDemo/pkg/utils"
 	"K8sWatchDemo/pkg/watcher"
 	"k8s.io/client-go/informers"
-	"k8s.io/client-go/tools/cache"
 	"time"
 )
 
@@ -35,9 +37,7 @@ func Start() {
 
 	w.Factory.WaitForCacheSync(stop)
 
-	go w.Deployments.Informer().Run(stop)
-	synced := w.Deployments.Informer().HasSynced
-	cache.WaitForCacheSync(stop, synced)
+	starter.StartThenSync(factory, stop, &deployment.Starter{}, &pod.Starter{})
 
 	handler.Register(&w, stop)
 

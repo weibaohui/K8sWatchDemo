@@ -4,8 +4,8 @@ import (
 	"K8sWatchDemo/pkg/mhl/handler"
 	"K8sWatchDemo/pkg/utils"
 	"K8sWatchDemo/pkg/watcher"
-	"fmt"
 	"k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
 	"time"
 )
 
@@ -35,16 +35,9 @@ func Start() {
 
 	w.Factory.WaitForCacheSync(stop)
 
-	for {
-
-		go w.Deployments.Informer().Run(stop)
-		synced := w.Deployments.Informer().HasSynced()
-		fmt.Println(synced)
-		if synced {
-			break
-		}
-		time.Sleep(time.Second * 2)
-	}
+	go w.Deployments.Informer().Run(stop)
+	synced := w.Deployments.Informer().HasSynced
+	cache.WaitForCacheSync(stop, synced)
 
 	handler.Register(&w, stop)
 

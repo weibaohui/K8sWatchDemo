@@ -1,7 +1,9 @@
 package pod
 
-import "K8sWatchDemo/pkg/watcher"
+import (
+	"k8s.io/client-go/informers"
+)
 
-func Register(w *watcher.Watcher, stop chan struct{}) {
-	register(w, stop)
+func Register(f informers.SharedInformerFactory) {
+	register(f)
 }

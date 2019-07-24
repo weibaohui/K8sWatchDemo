@@ -1,27 +1,24 @@
 package pod
 
 import (
-	"K8sWatchDemo/pkg/watcher"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/informers"
 	corev1 "k8s.io/client-go/listers/core/v1"
- )
+)
 
 type PodModule struct {
-	watcher *watcher.Watcher
-	cache   corev1.PodLister
+	cache corev1.PodLister
 }
 
-func register(w *watcher.Watcher, stop chan struct{}) {
+func register(f informers.SharedInformerFactory) {
 	m := &PodModule{}
-	m.watcher = w
-	m.cache = m.watcher.Pods.Lister()
-	informer := m.watcher.Pods.Informer()
+	m.cache = f.Core().V1().Pods().Lister()
+	informer := f.Core().V1().Pods().Informer()
 	informer.AddEventHandler(m)
 }
 
 func (m *PodModule) OnAdd(obj interface{}) {
-	 
 	logrus.Infof("podEventHandler OnAdd ,%v ", obj.(*v1.Pod).Name)
 }
 

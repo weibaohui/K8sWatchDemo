@@ -1,23 +1,21 @@
 package deploy
 
 import (
-	"K8sWatchDemo/pkg/watcher"
 	"github.com/sirupsen/logrus"
 	v1 "k8s.io/api/apps/v1"
+	"k8s.io/client-go/informers"
 	listerv1 "k8s.io/client-go/listers/apps/v1"
 	"strings"
 )
 
 type DeploymentModule struct {
-	watcher *watcher.Watcher
-	cache   listerv1.DeploymentLister
+	cache listerv1.DeploymentLister
 }
 
-func register(w *watcher.Watcher, stop chan struct{}) {
- 	m := &DeploymentModule{}
-	m.watcher = w
-	m.cache = m.watcher.Deployments.Lister()
-	informer := m.watcher.Deployments.Informer()
+func register(f informers.SharedInformerFactory) {
+	m := &DeploymentModule{}
+	m.cache = f.Apps().V1().Deployments().Lister()
+	informer := f.Apps().V1().Deployments().Informer()
 	informer.AddEventHandler(m)
 }
 

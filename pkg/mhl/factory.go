@@ -39,7 +39,7 @@ func Start() {
 
 	starter.StartThenSync(factory, stop, &deployment.Starter{}, &pod.Starter{})
 
-	handler.Register(&w, stop)
+	handler.Register(factory)
 
 	select {}
 }

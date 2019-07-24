@@ -1,14 +1,16 @@
 package watcher
 
+import "k8s.io/client-go/informers"
+
 type Register struct {
 	Handlers []HandlersRegister
 }
 
-func (r *Register) Register(w *Watcher, stop chan struct{}) error {
+func (r *Register) Register(f informers.SharedInformerFactory) error {
 	for _, reg := range r.Handlers {
-		 reg(w, stop)
+		reg(f)
 	}
 	return nil
 }
 
-type HandlersRegister func(w *Watcher, stop chan struct{})
+type HandlersRegister func(f informers.SharedInformerFactory)

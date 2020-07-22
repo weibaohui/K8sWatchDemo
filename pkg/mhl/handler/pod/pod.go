@@ -19,7 +19,7 @@ func register(f informers.SharedInformerFactory) {
 }
 
 func (m *PodModule) OnAdd(obj interface{}) {
-	logrus.Infof("podEventHandler OnAdd ,%v ", obj.(*v1.Pod).Name)
+	logrus.Infof("podEventHandler OnAdd , %v ", obj.(*v1.Pod).Name)
 }
 
 func (m *PodModule) OnUpdate(oldObj, newObj interface{}) {
@@ -33,5 +33,5 @@ func (m *PodModule) OnUpdate(oldObj, newObj interface{}) {
 }
 
 func (m *PodModule) OnDelete(obj interface{}) {
-	logrus.Infof("podEventHandler OnDelete ,%v ", obj)
+	logrus.Infof("podEventHandler OnDelete , %v ", obj)
 }

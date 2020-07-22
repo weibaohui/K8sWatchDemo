@@ -15,13 +15,10 @@ func Start() {
 		Produces(restful.MIME_JSON))
 	container.Add(ws)
 	log.Fatal(http.ListenAndServe(":9999", container))
-
 }
 
 // GET /ports
 func ports(request *restful.Request, response *restful.Response) {
-
 	configs := cluster.GetClusterConfig().List
-
 	response.WriteEntity(configs)
 }

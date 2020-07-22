@@ -20,17 +20,14 @@ func register(f informers.SharedInformerFactory) {
 }
 
 func (m *DeploymentModule) OnAdd(obj interface{}) {
-	deployment, err := m.cache.Deployments("default").Get("ratings-v1")
+	deployment, err := m.cache.Deployments("default").Get("nginx-deployment")
 	if err != nil {
 		logrus.Info(err.Error())
 		if strings.Contains(err.Error(), "not found") {
-			deployment, err = m.cache.Deployments("default").Get("ratings-v1")
-			if err != nil {
-				logrus.Info("第二次又失败了", err.Error())
-			}
+			logrus.Info("cache 没有获取到", "nginx-deployment")
 		}
 	} else {
-		logrus.Info("cache 获取到的", deployment.Name)
+		logrus.Infof("从 cache 获取到 %s,有%v个副本", deployment.Name, *deployment.Spec.Replicas)
 	}
 	logrus.Infof("deploymentEventHandler OnAdd ,%v ", obj.(*v1.Deployment).Name)
 }

@@ -1,7 +1,6 @@
 package webservice
 
 import (
-	"K8sWatchDemo/pkg/cluster"
 	"github.com/emicklei/go-restful"
 	"log"
 	"net/http"
@@ -19,6 +18,5 @@ func Start() {
 
 // GET /ports
 func ports(request *restful.Request, response *restful.Response) {
-	configs := cluster.GetClusterConfig().List
-	response.WriteEntity(configs)
+	response.WriteEntity("")
 }

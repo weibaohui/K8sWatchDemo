@@ -2,15 +2,18 @@ package utils
 
 import (
 	"flag"
-	coreV1 "k8s.io/api/core/v1"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	typeV1 "k8s.io/client-go/kubernetes/typed/core/v1"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
+
+	coreV1 "k8s.io/api/core/v1"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/fake"
+	typeV1 "k8s.io/client-go/kubernetes/typed/core/v1"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 var cli kubernetes.Interface
@@ -81,7 +84,9 @@ func GetClient() kubernetes.Interface {
 	if e != nil {
 		panic(e.Error())
 	}
-	return cli
+	fmt.Println(cli)
+	clientset := fake.NewSimpleClientset()
+	return clientset
 
 }
 

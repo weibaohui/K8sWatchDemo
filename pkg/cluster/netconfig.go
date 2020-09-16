@@ -1,13 +1,15 @@
 package cluster
 
 import (
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sync"
+
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
 type clusterConfig struct {
 	w    sync.RWMutex
-	List []*IpPortConfig
+	List []*v1.Pod
 }
 
 const (
@@ -26,7 +28,7 @@ type IpPortConfig struct {
 	PortType       string             `json:"port_type"`
 	TargetPort     intstr.IntOrString `json:"target_port"`
 	Linkable       bool               `json:"linkable"`
-	LastLinkTime   string             `json:"last_link_time"` //最后检测存活时间
+	LastLinkTime   string             `json:"last_link_time"` // 最后检测存活时间
 }
 
 var o sync.Once
@@ -35,7 +37,7 @@ var cnc *clusterConfig
 func init() {
 	o.Do(func() {
 		cnc = &clusterConfig{
-			List: make([]*IpPortConfig, 0),
+			List: make([]*v1.Pod, 0),
 		}
 	})
 
@@ -45,10 +47,10 @@ func GetClusterConfig() *clusterConfig {
 	return cnc
 }
 
-func (c *clusterConfig) Add(config *IpPortConfig) {
+func (c *clusterConfig) Add(pod *v1.Pod) {
 	c.w.Lock()
 	defer c.w.Unlock()
-	c.List = append(c.List, config)
+	c.List = append(c.List, pod)
 }
 
 // 删除 普通 SVC
@@ -56,13 +58,13 @@ func (c *clusterConfig) DeleteSvc(ns string, svcName string) {
 	c.w.Lock()
 	defer c.w.Unlock()
 	if len(c.List) == 0 {
-		//没有数据
+		// 没有数据
 		return
 	}
 	for k := 0; k < len(c.List); k++ {
 		v := c.List[k]
-		if v.Namespace == ns && v.ServiceName == svcName {
-			//前面的不动，隔一个，再拼上后面的,k需要减1，因为后面的元素index,往前移动了一个
+		if v.Namespace == ns && v.Name == svcName {
+			// 前面的不动，隔一个，再拼上后面的,k需要减1，因为后面的元素index,往前移动了一个
 			c.List = append(c.List[:k], c.List[k+1:]...)
 			k--
 		}
@@ -74,15 +76,24 @@ func (c *clusterConfig) ClearIngressSvc(protocol string) {
 	c.w.Lock()
 	defer c.w.Unlock()
 	if len(c.List) == 0 {
-		//没有数据
+		// 没有数据
 		return
 	}
+	// for k := 0; k < len(c.List); k++ {
+	// 	v := c.List[k]
+	// 	if v.PortType == PORT_TYPE_INGRESS_NGINX_PORT && v.Protocol == protocol {
+	// 		//前面的不动，隔一个，再拼上后面的,k需要减1，因为后面的元素index,往前移动了一个
+	// 		c.List = append(c.List[:k], c.List[k+1:]...)
+	// 		k--
+	// 	}
+	// }
+}
+
+func (c *clusterConfig) Update(pod *v1.Pod) {
 	for k := 0; k < len(c.List); k++ {
 		v := c.List[k]
-		if v.PortType == PORT_TYPE_INGRESS_NGINX_PORT && v.Protocol == protocol {
-			//前面的不动，隔一个，再拼上后面的,k需要减1，因为后面的元素index,往前移动了一个
-			c.List = append(c.List[:k], c.List[k+1:]...)
-			k--
+		if v.Name == pod.Name {
+			c.List[k] = pod
 		}
 	}
 }

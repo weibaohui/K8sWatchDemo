@@ -32,14 +32,14 @@ func checkUpdate(v *cluster.IpPortConfig) {
 }
 
 func AutoCheckPorts() {
-	tick := time.NewTicker(time.Minute * 2)
-	for {
-		select {
-		case <-tick.C:
-			for _, v := range cluster.GetClusterConfig().List {
-				go checkUpdate(v)
-			}
-		}
-	}
+	// tick := time.NewTicker(time.Minute * 2)
+	// for {
+	// 	select {
+	// 	case <-tick.C:
+	// 		for _, v := range cluster.GetClusterConfig().List {
+	// 			go checkUpdate(v)
+	// 		}
+	// 	}
+	// }
 
 }

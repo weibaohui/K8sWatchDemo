@@ -5,8 +5,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/informers"
 	corev1 "k8s.io/client-go/listers/core/v1"
-
-	"K8sWatchDemo/pkg/cluster"
 )
 
 type PodModule struct {
@@ -21,24 +19,19 @@ func register(f informers.SharedInformerFactory) {
 }
 
 func (m *PodModule) OnAdd(obj interface{}) {
-	pod := obj.(*v1.Pod)
-	logrus.Infof("podEventHandler OnAdd ,%v ", pod.Name)
-	cnc := cluster.GetClusterConfig()
-	cnc.Add(pod)
+	logrus.Infof("podEventHandler OnAdd , %v ", obj.(*v1.Pod).Name)
 }
 
 func (m *PodModule) OnUpdate(oldObj, newObj interface{}) {
-	oldPod := oldObj.(*v1.Pod)
-	newPod := newObj.(*v1.Pod)
-	cnc := cluster.GetClusterConfig()
-	cnc.Update(newPod)
-	if oldPod.ObjectMeta.GetResourceVersion() == newPod.ObjectMeta.GetResourceVersion() {
-		logrus.Info("same deploy %s,%s \n", oldPod.Name, oldPod.ObjectMeta.GetResourceVersion())
+	old := oldObj.(*v1.Pod)
+	newobj := newObj.(*v1.Pod)
+	if old.ObjectMeta.GetResourceVersion() == newobj.ObjectMeta.GetResourceVersion() {
+		logrus.Info("same deploy %s,%s \n", old.Name, old.ObjectMeta.GetResourceVersion())
 		return
 	}
-	logrus.Infof("podEventHandler OnUpdate new ,%v,%s ", newPod.Name, newPod.ObjectMeta.GetResourceVersion())
+	logrus.Infof("podEventHandler OnUpdate new ,%v,%s ", newobj.Name, newobj.ObjectMeta.GetResourceVersion())
 }
 
 func (m *PodModule) OnDelete(obj interface{}) {
-	logrus.Infof("podEventHandler OnDelete ,%v ", obj)
+	logrus.Infof("podEventHandler OnDelete , %v ", obj)
 }

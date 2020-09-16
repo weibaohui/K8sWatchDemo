@@ -5,6 +5,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/informers"
 	listerv1 "k8s.io/client-go/listers/apps/v1"
+	"strings"
 )
 
 type DeploymentModule struct {
@@ -19,18 +20,15 @@ func register(f informers.SharedInformerFactory) {
 }
 
 func (m *DeploymentModule) OnAdd(obj interface{}) {
-	// deployment, err := m.cache.Deployments("default").Get("busybox")
-	// if err != nil {
-	// 	logrus.Info(err.Error())
-	// 	// if strings.Contains(err.Error(), "not found") {
-	// 	// 	deployment, err = m.cache.Deployments("default").Get("ratings-v1")
-	// 	// 	if err != nil {
-	// 	// 		logrus.Info("第二次又失败了", err.Error())
-	// 	// 	}
-	// 	// }
-	// } else {
-	// 	logrus.Info("cache 获取到的", deployment.Name)
-	// }
+	deployment, err := m.cache.Deployments("default").Get("nginx-deployment")
+	if err != nil {
+		logrus.Info(err.Error())
+		if strings.Contains(err.Error(), "not found") {
+			logrus.Info("cache 没有获取到", "nginx-deployment")
+		}
+	} else {
+		logrus.Infof("从 cache 获取到 %s,有%v个副本", deployment.Name, *deployment.Spec.Replicas)
+	}
 	logrus.Infof("deploymentEventHandler OnAdd ,%v ", obj.(*v1.Deployment).Name)
 }
 
